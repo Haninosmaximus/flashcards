@@ -30,9 +30,6 @@ app.controller('CreateCtrl', ['$scope', function($scope) {
     Papa.parse($scope.csvFile, {
       header: true,
       complete: function(result) {
-        console.log(typeof result.data);
-        console.log(result.data);
-
         $scope.jsonResult = filterCSV(result.data);
         $scope.$apply();
       }
@@ -43,20 +40,23 @@ app.controller('CreateCtrl', ['$scope', function($scope) {
       var newArray = [];
 
       for(var i = 0; i < data.length; i++) {
+        var cardObj = {};
+        cardObj.username = data[i]["Username"];
+        cardObj.score = data[i]["% Score"];
+        cardObj.questions = [];
 
         for(var key in data[i]) {
           if(!data[i].hasOwnProperty(key)) {
             continue;
           }
-
-          if(data[i][key] == 1) {
-            delete data[i][key];
-          } else if(data[i][key] == 0) {
-            data[i][key] = answerObj[key];
+          if(data[i][key] == 0) {
+            cardObj.questions.push({front: key, back: answerObj[key]});
+            //data[i][key] = answerObj[key];
+            //delete data[i][key];
           }
 
         }
-        newArray.push(data[i]);
+        newArray.push(cardObj);
 
       }
       return newArray;
