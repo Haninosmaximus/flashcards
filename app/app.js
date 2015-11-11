@@ -51,10 +51,7 @@ app.controller('CreateCtrl', ['$scope', function($scope) {
           }
           if(data[i][key] == 0) {
             cardObj.questions.push({front: key, back: answerObj[key]});
-            //data[i][key] = answerObj[key];
-            //delete data[i][key];
           }
-
         }
         newArray.push(cardObj);
 
