@@ -1,16 +1,16 @@
 <div class="container" ng-controller="CreateCtrl">
 
-  <div class="form-input">
+  <div class="form-input" ng-hide="jsonResult">
     <label for="fileInput">Select a CSV file...</label>
     <input type="file" id="fileInput" onchange="angular.element(this).scope().filesChanged(this)" accept=".csv">
+  <button type="button" class="btn btn-primary" ng-click="create()">Open CSV</button>
+  <hr>
   </div>
 
-  <button type="button" class="btn btn-primary" ng-click="create()">Open CSV</button>
 
-  <hr>
   <div class="row" ng-repeat="each in jsonResult">
     <h1 class="text-center">{{ each.username }} <small><i>{{ each.score }}</i></small></h1>
-      <div class="pull-left" id="f1_container" ng-repeat="q in each.questions">
+      <div class="col-xs-4" id="f1_container" ng-repeat="q in each.questions">
         <div id="f1_card" class="shadow">
           <div class="front face"><p>{{ q.front }}</p></div>
           <div class="back face center"><p>{{ q.back }}</p></div>
