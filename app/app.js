@@ -1,4 +1,4 @@
-var app = angular.module('FlashcardApp', ['ngRoute']);
+var app = angular.module('FlashcardApp', ['ngRoute', 'firebase']);
 
 app.config(['$routeProvider', function($routeProvider) {
   $routeProvider
@@ -15,13 +15,37 @@ app.config(['$routeProvider', function($routeProvider) {
     });
 }]);
 
-app.controller('IndexCtrl', ['$scope', function($scope) {
+app.factory('fireFactory', ['$firebaseObject', '$firebaseAuth', function($firebaseObject, $firebaseAuth) {
+  var ref = new Firebase('https://quizlet-flashcards.firebaseio.com');
+  return {
+    authUser: function() {
+      return $firebaseAuth(ref);
+    },
+    getRef: function() {
+      return ref;
+    }
+  }
+}])
 
-  $scope.data = 'welcome';
+app.controller('IndexCtrl', ['$scope', 'fireFactory', function($scope, fireFactory) {
+  $scope.auth = fireFactory;
+
+  $scope.auth.authUser().$onAuth(function(authData) {
+    if(authData) {
+      $scope.auth.getRef().child('users').child(authData.uid).set(authData);
+    }
+    $scope.authData = authData;
+  });
+
+  $scope.flashCards = function() {
+    $firebaseArray(fireFactory.getRef().child('charts'));
+  }
 
 }]);
 
-app.controller('CreateCtrl', ['$scope', function($scope) {
+app.controller('CreateCtrl', ['$scope', 'fireFactory', function($scope, fireFactory) {
+  $scope.fireFactory = fireFactory;
+
   $scope.filesChanged = function(elm) {
     $scope.csvFile = elm.files[0];
     $scope.$apply();
@@ -31,6 +55,7 @@ app.controller('CreateCtrl', ['$scope', function($scope) {
       header: true,
       complete: function(result) {
         $scope.jsonResult = filterCSV(result.data);
+        console.log($scope.jsonResult);
         $scope.$apply();
       }
     });

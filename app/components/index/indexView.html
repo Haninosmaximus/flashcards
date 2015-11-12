@@ -1,8 +1,14 @@
 <div class="container" ng-controller="IndexCtrl">
   <div class="row">
     <div class="col-xs-12">
-      <h1>{{ data }}!</h1>
-      <a class="btn btn-info" href="#/create" role="button">create from quizlet csv</a>
+      <h1>Welcome<span ng-show="!authData"> to my flashcard app</span>
+                  <span ng-show="authData">, {{ authData.google.displayName }}</span>
+        <button type="button" class="btn btn-xs btn-primary" ng-click="auth.authUser().$unauth()" ng-show="authData">logout</button>
+      </h1>
+
+
+      <button class="btn btn-primary" type="button" ng-click="auth.authUser().$authWithOAuthPopup('google',{scope: 'email'})" ng-hide="authData">Get in!</button>
+      <a class="btn btn-info btn-block" href="#/create" role="button" ng-show="authData">create from quizlet csv</a>
     </div>
   </div>
 </div>
