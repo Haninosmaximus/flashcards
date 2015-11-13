@@ -1,5 +1,17 @@
 var app = angular.module('FlashcardApp', ['ngRoute', 'firebase']);
 
+app.constant('FBURL', 'https://quizlet-flashcards.firebaseio.com');
+
+app.run(["$rootScope", "$location", function($rootScope, $location) {
+  $rootScope.$on("$routeChangeError", function(event, next, previous, error) {
+    // We can catch the error thrown when the $requireAuth promise is rejected
+    // and redirect the user back to the home page
+    if (error === "AUTH_REQUIRED") {
+      $location.path("/home");
+    }
+  });
+}]);
+
 app.config(['$routeProvider', function($routeProvider) {
   $routeProvider
     .when('/', {
@@ -8,17 +20,24 @@ app.config(['$routeProvider', function($routeProvider) {
     })
     .when('/create', {
       templateUrl: 'app/components/create/createView.html',
-      controller: 'CreateCtrl'
+      controller: 'CreateCtrl',
+      resolve: {
+        'currentAuth': ['fireFactory', function(fireFactory) {
+          return fireFactory.getAuth().$requireAuth();
+        }]
+      }
     })
     .otherwise({
       redirectTo: '/'
     });
 }]);
 
-app.factory('fireFactory', ['$firebaseObject', '$firebaseAuth', function($firebaseObject, $firebaseAuth) {
-  var ref = new Firebase('https://quizlet-flashcards.firebaseio.com');
+
+app.factory('fireFactory', ['$firebaseObject', '$firebaseAuth', 'FBURL', function($firebaseObject, $firebaseAuth, FBURL) {
+  var ref = new Firebase(FBURL);
+
   return {
-    authUser: function() {
+    getAuth: function() {
       return $firebaseAuth(ref);
     },
     getRef: function() {
@@ -28,15 +47,30 @@ app.factory('fireFactory', ['$firebaseObject', '$firebaseAuth', function($fireba
       return $firebaseObject(ref.child('charts').child(user));
     }
   }
+}]);
+
+app.service('userSvc', ['fireFactory', function(fireFactory) {
+  this.setUser = function(user) {
+    var userObj = {
+      uid: user.uid,
+      data: {
+        username: user.google.email.split('@')[0],
+        displayname: user.google.displayName,
+        email: user.google.email,
+        picture: user.google.profileImageURL,
+        teacher: true
+      }
+    }
+    return fireFactory.getRef().child('users').set(userObj);
+  }
 }])
 
-app.controller('IndexCtrl', ['$scope', 'fireFactory', function($scope, fireFactory) {
+app.controller('IndexCtrl', ['$scope', 'fireFactory', 'userSvc', function($scope, fireFactory, userSvc) {
   $scope.auth = fireFactory;
 
-  $scope.auth.authUser().$onAuth(function(authData) {
+  $scope.auth.getAuth().$onAuth(function(authData) {
     if(authData) {
-      $scope.auth.getRef().child('users').child(authData.uid).set(authData);
-      $scope.flashcards = fireFactory.getUserCharts(authData.google.email.split('@')[0]);
+      userSvc.setUser(authData);
     }
     $scope.authData = authData;
   });
@@ -57,11 +91,18 @@ app.controller('CreateCtrl', ['$scope', 'fireFactory', function($scope, fireFact
     Papa.parse($scope.csvFile, {
       header: true,
       complete: function(result) {
-        $scope.jsonResult = filterCSV(result.data);
+        var correct = result.data.shift();
+        var studentChart = {};
+
+        console.log($scope.jsonResult);
         $scope.$apply();
       }
     });
 
+
+    /**************************
+    deprecated but saved for reference
+    ***************************
     function filterCSV(data) {
       var answerObj = data.shift();
       var newArray = [];
@@ -89,6 +130,10 @@ app.controller('CreateCtrl', ['$scope', 'fireFactory', function($scope, fireFact
       return newArray;
 
     }
+
+    ******************************
+    end of the bs
+    ****************************/
   }
 
 }])
