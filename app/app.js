@@ -23,6 +23,9 @@ app.factory('fireFactory', ['$firebaseObject', '$firebaseAuth', function($fireba
     },
     getRef: function() {
       return ref;
+    },
+    getUserCharts: function(user) {
+      return $firebaseObject(ref.child('charts').child(user));
     }
   }
 }])
@@ -33,18 +36,18 @@ app.controller('IndexCtrl', ['$scope', 'fireFactory', function($scope, fireFacto
   $scope.auth.authUser().$onAuth(function(authData) {
     if(authData) {
       $scope.auth.getRef().child('users').child(authData.uid).set(authData);
+      $scope.flashcards = fireFactory.getUserCharts(authData.google.email.split('@')[0]);
     }
     $scope.authData = authData;
   });
-
-  $scope.flashCards = function() {
-    $firebaseArray(fireFactory.getRef().child('charts'));
-  }
 
 }]);
 
 app.controller('CreateCtrl', ['$scope', 'fireFactory', function($scope, fireFactory) {
   $scope.fireFactory = fireFactory;
+  $scope.fireFactory.authUser().$onAuth(function(authData) {
+    $scope.authData = authData;
+  });
 
   $scope.filesChanged = function(elm) {
     $scope.csvFile = elm.files[0];
@@ -55,7 +58,6 @@ app.controller('CreateCtrl', ['$scope', 'fireFactory', function($scope, fireFact
       header: true,
       complete: function(result) {
         $scope.jsonResult = filterCSV(result.data);
-        console.log($scope.jsonResult);
         $scope.$apply();
       }
     });
@@ -79,6 +81,9 @@ app.controller('CreateCtrl', ['$scope', 'fireFactory', function($scope, fireFact
           }
         }
         newArray.push(cardObj);
+        fireFactory.getRef().child('charts').child(cardObj.username.split('@')[0]).push(cardObj);
+        //console.log(answerObj);
+        //fireFactory.getRef().child('created').child($scope.authData.google.email.split('@')[0]).push(answerObj);
 
       }
       return newArray;

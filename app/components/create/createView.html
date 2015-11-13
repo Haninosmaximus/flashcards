@@ -1,6 +1,7 @@
 <div class="container" ng-controller="CreateCtrl">
 
   <div class="form-input" ng-hide="jsonResult">
+    <h2>{{ authData.google.displayName }}</h2>
     <label for="fileInput">Select a CSV file...</label>
     <input type="file" id="fileInput" onchange="angular.element(this).scope().filesChanged(this)" accept=".csv">
   <button type="button" class="btn btn-primary" ng-click="create()">Open CSV</button>

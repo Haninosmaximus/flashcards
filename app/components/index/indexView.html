@@ -8,7 +8,16 @@
 
 
       <button class="btn btn-primary" type="button" ng-click="auth.authUser().$authWithOAuthPopup('google',{scope: 'email'})" ng-hide="authData">Get in!</button>
-      <a class="btn btn-info btn-block" href="#/create" role="button" ng-show="authData">create from quizlet csv</a>
+      <a class="btn btn-info btn-block" href="#/create" role="button" ng-show="authData.teacher">create from quizlet csv</a>
     </div>
+
+    <div class="row" ng-repeat="each in flashcards">
+    <div class="col-xs-4" id="f1_container" ng-repeat="q in each.questions">
+      <div id="f1_card" class="shadow">
+        <div class="front face"><p>{{ q.front }}</p></div>
+        <div class="back face center"><p>{{ q.back }}</p></div>
+      </div>
+    </div>
+  </div>
   </div>
 </div>
