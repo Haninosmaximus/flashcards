@@ -50,6 +50,7 @@ app.factory('fireFactory', ['$firebaseObject', '$firebaseAuth', 'FBURL', functio
 }]);
 
 app.service('userSvc', ['fireFactory', function(fireFactory) {
+
   this.setUser = function(user) {
     var userObj = {
       uid: user.uid,
@@ -62,8 +63,13 @@ app.service('userSvc', ['fireFactory', function(fireFactory) {
       }
     }
     return fireFactory.getRef().child('users').set(userObj);
-  }
+  };
+
 }])
+
+app.service('flashcardSvc', ['userSvc', function() {
+
+}]);
 
 app.controller('IndexCtrl', ['$scope', 'fireFactory', 'userSvc', function($scope, fireFactory, userSvc) {
   $scope.auth = fireFactory;
