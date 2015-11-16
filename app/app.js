@@ -7,7 +7,7 @@ app.run(["$rootScope", "$location", function($rootScope, $location) {
     // We can catch the error thrown when the $requireAuth promise is rejected
     // and redirect the user back to the home page
     if (error === "AUTH_REQUIRED") {
-      $location.path("/home");
+      $location.path("/");
     }
   });
 }]);
@@ -43,8 +43,8 @@ app.factory('fireFactory', ['$firebaseObject', '$firebaseAuth', 'FBURL', functio
     getRef: function() {
       return ref;
     },
-    getUserCharts: function(user) {
-      return $firebaseObject(ref.child('charts').child(user));
+    getCharts: function() {
+      return new Firebase(FBURL + '/charts');
     }
   }
 }]);
@@ -53,39 +53,56 @@ app.service('userSvc', ['fireFactory', function(fireFactory) {
 
   this.setUser = function(user) {
     var userObj = {
-      uid: user.uid,
       data: {
         username: user.google.email.split('@')[0],
         displayname: user.google.displayName,
         email: user.google.email,
         picture: user.google.profileImageURL,
-        teacher: true
+        teacher: false
       }
     }
-    return fireFactory.getRef().child('users').set(userObj);
+    return fireFactory.getRef().child('users').child(user.uid).set(userObj);
   };
+
 
 }])
 
-app.service('flashcardSvc', ['userSvc', function() {
+app.service('flashcardSvc', ['fireFactory','userSvc', '$firebaseArray',
+  function(fireFactory, userSvc, $firebaseArray) {
+    this.getFlashcards = function(user) {
 
+      return $firebaseArray(fireFactory.getRef().child('charts').child(user.uid));
+    }
+
+    this.getPracticeCards = function(user) {
+      return $firebaseArray(fireFactory.getRef().child('flashcards')
+        .child(user.google.email.split('@')[1].split('.')[0])
+        .child(user.google.email.split('@')[0]));
+    }
 }]);
 
-app.controller('IndexCtrl', ['$scope', 'fireFactory', 'userSvc', function($scope, fireFactory, userSvc) {
+app.controller('IndexCtrl', ['$scope', 'fireFactory', 'userSvc', 'flashcardSvc',
+  function($scope, fireFactory, userSvc, flashcardSvc) {
   $scope.auth = fireFactory;
 
   $scope.auth.getAuth().$onAuth(function(authData) {
     if(authData) {
       userSvc.setUser(authData);
+      if(authData.teacher) {
+        $scope.flashcards = flashcardSvc.getFlashcards(authData);
+      } else {
+        $scope.flashcards = flashcardSvc.getPracticeCards(authData);
+        console.log($scope.flashcards);
+      }
     }
     $scope.authData = authData;
   });
 
 }]);
 
-app.controller('CreateCtrl', ['$scope', 'fireFactory', function($scope, fireFactory) {
+app.controller('CreateCtrl', ['$scope', '$location', 'fireFactory', function($scope, $location, fireFactory) {
   $scope.fireFactory = fireFactory;
-  $scope.fireFactory.authUser().$onAuth(function(authData) {
+  $scope.fireFactory.getAuth().$onAuth(function(authData) {
     $scope.authData = authData;
   });
 
@@ -94,31 +111,42 @@ app.controller('CreateCtrl', ['$scope', 'fireFactory', function($scope, fireFact
     $scope.$apply();
   }
   $scope.create = function() {
+    $scope.jsonResult = true;
     Papa.parse($scope.csvFile, {
       header: true,
       complete: function(result) {
-        var correct = result.data.shift();
-        var studentChart = {};
-
-        console.log($scope.jsonResult);
+        filterCSV(result.data);
+        $location.path('/#');
         $scope.$apply();
       }
     });
 
-
-    /**************************
-    deprecated but saved for reference
-    ***************************
     function filterCSV(data) {
       var answerObj = data.shift();
-      var newArray = [];
+      var chartCards = [];
+
+      //change data in the answer object
+      delete answerObj["Username"];
+      delete answerObj["% Score"];
+      delete answerObj["Timestamp"];
+      for(var key in answerObj) {
+        if(!answerObj.hasOwnProperty(key)) {
+          continue;
+        }
+        chartCards.push({front: key, back: answerObj[key]});
+      }
+      fireFactory.getRef().child('charts').child($scope.authData.uid).push(chartCards);
 
       for(var i = 0; i < data.length; i++) {
         var cardObj = {};
-        cardObj.username = data[i]["Username"];
-        cardObj.score = data[i]["% Score"];
+        if(data[i]["Username"]) {
+          cardObj.domainName = data[i]["Username"].split('@')[1].split('.')[0];
+          cardObj.username = data[i]["Username"].split('@')[0];
+
         cardObj.questions = [];
 
+
+        //change data into a front and back card
         for(var key in data[i]) {
           if(!data[i].hasOwnProperty(key)) {
             continue;
@@ -127,19 +155,13 @@ app.controller('CreateCtrl', ['$scope', 'fireFactory', function($scope, fireFact
             cardObj.questions.push({front: key, back: answerObj[key]});
           }
         }
-        newArray.push(cardObj);
-        fireFactory.getRef().child('charts').child(cardObj.username.split('@')[0]).push(cardObj);
+        fireFactory.getRef().child('flashcards').child(cardObj.domainName).child(cardObj.username).push(cardObj.questions);
         //console.log(answerObj);
-        //fireFactory.getRef().child('created').child($scope.authData.google.email.split('@')[0]).push(answerObj);
 
+        }
       }
-      return newArray;
 
     }
-
-    ******************************
-    end of the bs
-    ****************************/
   }
 
 }])
