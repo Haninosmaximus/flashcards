@@ -49,7 +49,7 @@ app.factory('fireFactory', ['$firebaseObject', '$firebaseAuth', 'FBURL', functio
   }
 }]);
 
-app.service('userSvc', ['fireFactory', function(fireFactory) {
+app.service('userSvc', ['fireFactory', '$firebaseObject', function(fireFactory, $firebaseObject) {
 
   this.setUser = function(user) {
     var userObj = {
@@ -63,6 +63,21 @@ app.service('userSvc', ['fireFactory', function(fireFactory) {
     }
     return fireFactory.getRef().child('users').child(user.uid).set(userObj);
   };
+
+  this.getUser = function(user) {
+    var userData = $firebaseObject(fireFactory.getRef().child('users').child(user.uid).child('data'));
+    return userData;
+  }
+
+  this.inDb = function(user) {
+    var exists = $firebaseObject(fireFactory.getRef().child('users').child(user.uid));
+    console.log(exists);
+    if(exists) {
+      return true;
+    } else {
+      return false;
+    }
+  }
 
 
 }])
@@ -87,13 +102,31 @@ app.controller('IndexCtrl', ['$scope', 'fireFactory', 'userSvc', 'flashcardSvc',
 
   $scope.auth.getAuth().$onAuth(function(authData) {
     if(authData) {
-      userSvc.setUser(authData);
-      if(authData.teacher) {
+      var userData = userSvc.getUser(authData);
+      userData.$loaded().then(function(resp) {
+        console.log(resp);
+        if(userData.teacher) {
+          $scope.teacher = true;
+          $scope.flashcards = flashcardSvc.getFlashcards(authData);
+        } else if(!userData.username) {
+          userSvc.setUser(authData);
+          $scope.flashcards = flashcardSvc.getPracticeCards(authData);
+          console.log('user set');
+        }
+      });
+/*
+      if(registeredUser.teacher !== undefined) {
+        console.log('teacher in');
         $scope.flashcards = flashcardSvc.getFlashcards(authData);
-      } else {
+
+      } else if(!userSvc.inDb(authData)) {
+        userSvc.setUser(authData);
         $scope.flashcards = flashcardSvc.getPracticeCards(authData);
-        console.log($scope.flashcards);
+        console.log('user set');
       }
+*/
+    } else {
+      $scope.teacher = false;
     }
     $scope.authData = authData;
   });
