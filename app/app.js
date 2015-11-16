@@ -96,6 +96,18 @@ app.service('flashcardSvc', ['fireFactory','userSvc', '$firebaseArray',
     }
 }]);
 
+app.directive('cardFlip', [function() {
+  return {
+    restrict: 'A',
+    scope: {},
+    link: function($scope, element, attrs) {
+      element.bind('click', function() {
+        element.toggleClass('flipped');
+      })
+    }
+  }
+}])
+
 app.controller('IndexCtrl', ['$scope', 'fireFactory', 'userSvc', 'flashcardSvc',
   function($scope, fireFactory, userSvc, flashcardSvc) {
   $scope.auth = fireFactory;
@@ -111,20 +123,11 @@ app.controller('IndexCtrl', ['$scope', 'fireFactory', 'userSvc', 'flashcardSvc',
         } else if(!userData.username) {
           userSvc.setUser(authData);
           $scope.flashcards = flashcardSvc.getPracticeCards(authData);
-          console.log('user set');
+          console.log($scope.flashcards);
+        } else {
+          $scope.flashcards = flashcardSvc.getPracticeCards(authData);
         }
       });
-/*
-      if(registeredUser.teacher !== undefined) {
-        console.log('teacher in');
-        $scope.flashcards = flashcardSvc.getFlashcards(authData);
-
-      } else if(!userSvc.inDb(authData)) {
-        userSvc.setUser(authData);
-        $scope.flashcards = flashcardSvc.getPracticeCards(authData);
-        console.log('user set');
-      }
-*/
     } else {
       $scope.teacher = false;
     }
