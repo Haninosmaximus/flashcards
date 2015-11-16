@@ -186,6 +186,8 @@ app.controller('CreateCtrl', ['$scope', '$location', 'fireFactory', function($sc
           }
           if(data[i][key] == 0) {
             cardObj.questions.push({front: key, back: answerObj[key]});
+          } else {
+            cardObj.questions.push({front: key, back: data[i][key]});
           }
         }
         fireFactory.getRef().child('flashcards').child(cardObj.domainName).child(cardObj.username).push(cardObj.questions);
