@@ -27,6 +27,15 @@ app.config(['$routeProvider', function($routeProvider) {
         }]
       }
     })
+    .when('/:user/quizme', {
+      templateUrl: 'app/components/quizme/quizmeView.html',
+      controller: 'QuizmeCtrl',
+      resolve: {
+        'currentAuth': ['fireFactory', function(fireFactory) {
+          return fireFactory.getAuth().$requireAuth();
+        }]
+      }
+    })
     .otherwise({
       redirectTo: '/'
     });
@@ -116,7 +125,6 @@ app.controller('IndexCtrl', ['$scope', 'fireFactory', 'userSvc', 'flashcardSvc',
     if(authData) {
       var userData = userSvc.getUser(authData);
       userData.$loaded().then(function(resp) {
-        console.log(resp);
         if(userData.teacher) {
           $scope.teacher = true;
           $scope.flashcards = flashcardSvc.getFlashcards(authData);
@@ -130,6 +138,7 @@ app.controller('IndexCtrl', ['$scope', 'fireFactory', 'userSvc', 'flashcardSvc',
       });
     } else {
       $scope.teacher = false;
+      $scope.flashcards = undefined;
     }
     $scope.authData = authData;
   });
@@ -202,4 +211,9 @@ app.controller('CreateCtrl', ['$scope', '$location', 'fireFactory', function($sc
     }
   }
 
-}])
+}]);
+
+app.controller('QuizmeCtrl', ['$scope', 'flashcardSvc', 'userSvc',
+  function($scope, flashcardSvc, userSvc) {
+    //create a view for students to quiz themselves
+}]);
