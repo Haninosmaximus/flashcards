@@ -1,13 +1,22 @@
-<div class="container" ng-controller="IndexCtrl">
-  <div class="jumbotron text-center">
-      <h1>Welcome<span ng-show="!authData"> to my flashcard app</span><span ng-show="authData">, {{ authData.google.displayName }}</span>
-      <div class="input-group pull-right">
-        <a class="btn btn-success" href="#/create" role="button" ng-show="teacher">create from quizlet csv</a>
-        <button type="button" class="btn btn-primary" ng-click="auth.getAuth().$unauth()" ng-show="authData">logout</button>
+<div ng-controller="IndexCtrl">
+<!-- navbar -->
+<div ng-show="authData" ng-cloak>
+  <div ng-include="'app/shared/navbarView.html'"></div>
+</div>
+<!-- Page specific -->
+<div class="container">
+  <div ng-cloak ng-show="!authData" class="jumbotron text-center">
+    <h1>Flashcard App!</h1>
+    <button class="btn btn-danger" type="button" ng-click="auth.getAuth.$authWithOAuthPopup('google',{scope: 'email'})"><h3><span class="fa fa-google-plus"> | Get in!</span></h3></button>
+  </div>
 
-      </div>
-      </h1>
-      <button class="btn btn-danger" type="button" ng-click="auth.getAuth().$authWithOAuthPopup('google',{scope: 'email'})" ng-hide="authData"><h3><span class="fa fa-google-plus"> | Get in!</span></h3></button>
+  <div class="row" ng-show="authData">
+    <div class="col-sm-3">
+      <img ng-src="{{ authData.google.profileImageURL }}" class="img-responsive img-rounded" style="width:150px">
+    </div>
+    <div class="col-sm-9">
+      <h2>Welcome, {{ authData.google.displayName }}</h2>
+    </div>
   </div>
   <div ng-show="!teacher">
     <hr style="border: 1px solid black">
@@ -22,7 +31,6 @@
       </div>
     </div>
   </div>
-
   <div ng-show="teacher">
     <hr style="border: 1px solid black;">
     <table class="table table-striped table-hover">
@@ -40,4 +48,5 @@
       </tbody>
     </table>
   </div>
+</div>
 </div>

@@ -23,7 +23,7 @@ app.config(['$routeProvider', function($routeProvider) {
       controller: 'CreateCtrl',
       resolve: {
         'currentAuth': ['fireFactory', function(fireFactory) {
-          return fireFactory.getAuth().$requireAuth();
+          return fireFactory.getAuth.$requireAuth();
         }]
       }
     })
@@ -32,7 +32,7 @@ app.config(['$routeProvider', function($routeProvider) {
       controller: 'QuizmeCtrl',
       resolve: {
         'currentAuth': ['fireFactory', function(fireFactory) {
-          return fireFactory.getAuth().$requireAuth();
+          return fireFactory.getAuth.$requireAuth();
         }]
       }
     })
@@ -42,64 +42,54 @@ app.config(['$routeProvider', function($routeProvider) {
 }]);
 
 
-app.factory('fireFactory', ['$firebaseObject', '$firebaseAuth', 'FBURL', function($firebaseObject, $firebaseAuth, FBURL) {
-  var ref = new Firebase(FBURL);
+app.factory('fireFactory', ['$firebaseAuth', 'FBURL',
+  function($firebaseAuth, FBURL) {
+    var ref = new Firebase(FBURL);
 
-  return {
-    getAuth: function() {
-      return $firebaseAuth(ref);
-    },
-    getRef: function() {
-      return ref;
-    },
-    getCharts: function() {
-      return new Firebase(FBURL + '/charts');
+    return {
+      getAuth: $firebaseAuth(ref),
+      getRef: ref
     }
-  }
+
 }]);
 
-app.service('userSvc', ['fireFactory', '$firebaseObject', function(fireFactory, $firebaseObject) {
 
-  this.setUser = function(user) {
-    var userObj = {
-      data: {
-        username: user.google.email.split('@')[0],
-        displayname: user.google.displayName,
-        email: user.google.email,
-        picture: user.google.profileImageURL,
-        teacher: false
+/** This needs to be refactored
+* Figure out how to take the user, throw it into the database, and keep the data for reuse in differ
+* different controllers. Shouldn't be as hard as you are making it
+*/
+app.service('userSvc', ['fireFactory', '$firebaseObject',
+  function(fireFactory, $firebaseObject) {
+
+    this.setUser = function(user) {
+      var userObj = {
+        data: {
+          username: user.google.email.split('@')[0],
+          displayname: user.google.displayName,
+          email: user.google.email,
+          picture: user.google.profileImageURL,
+          teacher: false
+        }
       }
+      return fireFactory.getRef.child('users').child(user.uid).set(userObj);
+    };
+
+    this.getUser = function(user) {
+      var userData = $firebaseObject(fireFactory.getRef.child('users').child(user.uid).child('data'));
+      return userData;
     }
-    return fireFactory.getRef().child('users').child(user.uid).set(userObj);
-  };
-
-  this.getUser = function(user) {
-    var userData = $firebaseObject(fireFactory.getRef().child('users').child(user.uid).child('data'));
-    return userData;
-  }
-
-  this.inDb = function(user) {
-    var exists = $firebaseObject(fireFactory.getRef().child('users').child(user.uid));
-    console.log(exists);
-    if(exists) {
-      return true;
-    } else {
-      return false;
-    }
-  }
-
 
 }])
 
-app.service('flashcardSvc', ['fireFactory','userSvc', '$firebaseArray',
-  function(fireFactory, userSvc, $firebaseArray) {
+app.service('flashcardSvc', ['fireFactory', '$firebaseArray',
+  function(fireFactory, $firebaseArray) {
     this.getFlashcards = function(user) {
 
-      return $firebaseArray(fireFactory.getRef().child('charts').child(user.uid));
+      return $firebaseArray(fireFactory.getRef.child('charts').child(user.uid));
     }
 
     this.getPracticeCards = function(user) {
-      return $firebaseArray(fireFactory.getRef().child('flashcards')
+      return $firebaseArray(fireFactory.getRef.child('flashcards')
         .child(user.google.email.split('@')[1].split('.')[0])
         .child(user.google.email.split('@')[0]));
     }
@@ -121,7 +111,7 @@ app.controller('IndexCtrl', ['$scope', 'fireFactory', 'userSvc', 'flashcardSvc',
   function($scope, fireFactory, userSvc, flashcardSvc) {
   $scope.auth = fireFactory;
 
-  $scope.auth.getAuth().$onAuth(function(authData) {
+  $scope.auth.getAuth.$onAuth(function(authData) {
     if(authData) {
       var userData = userSvc.getUser(authData);
       userData.$loaded().then(function(resp) {
@@ -147,7 +137,7 @@ app.controller('IndexCtrl', ['$scope', 'fireFactory', 'userSvc', 'flashcardSvc',
 
 app.controller('CreateCtrl', ['$scope', '$location', 'fireFactory', function($scope, $location, fireFactory) {
   $scope.fireFactory = fireFactory;
-  $scope.fireFactory.getAuth().$onAuth(function(authData) {
+  $scope.fireFactory.getAuth.$onAuth(function(authData) {
     $scope.authData = authData;
   });
 
@@ -160,7 +150,7 @@ app.controller('CreateCtrl', ['$scope', '$location', 'fireFactory', function($sc
     Papa.parse($scope.csvFile, {
       header: true,
       complete: function(result) {
-        filterCSV(result.data);
+        filterCSV(result.data);    // this whole function needs to come out of the controller
         $location.path('/#');
         $scope.$apply();
       }
@@ -180,7 +170,7 @@ app.controller('CreateCtrl', ['$scope', '$location', 'fireFactory', function($sc
         }
         chartCards.push({front: key, back: answerObj[key]});
       }
-      fireFactory.getRef().child('charts').child($scope.authData.uid).push(chartCards);
+      fireFactory.getRef.child('charts').child($scope.authData.uid).push(chartCards);
 
       for(var i = 0; i < data.length; i++) {
         var cardObj = {};
@@ -202,7 +192,7 @@ app.controller('CreateCtrl', ['$scope', '$location', 'fireFactory', function($sc
             cardObj.questions.push({front: key, back: data[i][key]});
           }
         }
-        fireFactory.getRef().child('flashcards').child(cardObj.domainName).child(cardObj.username).push(cardObj.questions);
+        fireFactory.getRef.child('flashcards').child(cardObj.domainName).child(cardObj.username).push(cardObj.questions);
         //console.log(answerObj);
 
         }

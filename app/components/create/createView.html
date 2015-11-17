@@ -1,30 +1,86 @@
-<div class="container" ng-controller="CreateCtrl">
+<div ng-controller="CreateCtrl">
+<div ng-include="'app/shared/navbarView.html'"></div>
+<div class="container">
   <h2>{{ authData.google.displayName }} - Create your quiz below</h2>
-
-
-  <ul class="nav nav-tabs" ng-init="active.tab = 'create'">
-    <li ng-class="{active: active.tab === 'create'}" ng-click="active.tab = 'create'"><a>Create your quiz</a></li>
+  <ul class="nav nav-tabs" ng-init="active.tab = 'upload'">
+    <li ng-class="{active: active.tab === 'create'}" class="disabled" ng-click="active.tab = 'create'"><a>Create your quiz UNDER CONSTRUCTION!!</a></li>
     <li ng-class="{active: active.tab === 'upload'}" ng-click="active.tab = 'upload'"><a>Upload from CSV file</a></li>
     <li ng-class="{active: active.tab === 'help'}" ng-click="active.tab = 'help'"><a>Need help?</a></li>
   </ul>
-
-
   <div class="tabContent" ng-switch="active.tab">
     <div ng-switch-when="create">
+      <div class="row">
+        <div class="col-md-12">
+        <div class="alert alert-danger">
+          <strong>Under construction!</strong> Just for testing right now.
+        </div>
+          <div class="form-group">
+            <label for="cardsTitle">Give your list of flashcards a title...</label>
+            <input id="cardsTitle" class="form-control">
+          </div>
+        </div>
+        <br>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label for="frontText">Text for the front of your card below...</label>
+            <textarea class="form-control" id="frontText" ng-model="card.front"></textarea>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-group">
+            <label for="backText"><b>Text for the back of your card below...</b></label>
+            <textarea class="form-control" id="backText" ng-model="card.back"></textarea>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="col-md-8 col-md-offset-2">
+            <a class="btn btn-primary">Add</a>
+            <a class="btn btn-success">Save</a>
+          </div>
+        </div>
+      </div>
       <hr>
+      <!-- i need to break these cards into one simple <card-flip> type directive -->
+      <div class="row">
+        <div class="col-xs-12">
+          <div class="flip">
+            <div class="card" card-flip>
+              <div class="face front">{{ card.front }}</div>
+              <div class="face back">{{ card.back }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-xs-3" ng-repeat="each in flashcards">
+          <div class="flip" ng-repeat="q in each">
+            <div class="card" card-flip>
+              <div class="face front">{{ q.front }}</div>
+              <div class="face back">{{ q.back }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
+    <!-- upload to firebase tab -->
     <div ng-switch-when="upload">
-      <div class="form-input" ng-hide="jsonResult">
+      <div class="form-group">
         <label for="quizTitle">Give your quiz a title...</label>
         <input type="text" class="form-control" id="quizTitle" ng-model="title">
+      </div>
+      <div class="form-group">
         <label for="fileInput">Select a CSV file...</label>
         <input type="file" class="form-control" id="fileInput" onchange="angular.element(this).scope().filesChanged(this)" accept=".csv">
+      </div>
+      <div class="form-group">
         <button type="button" class="btn btn-primary btn-block" ng-click="create()">Open CSV</button>
       </div>
       <hr>
     </div>
     <div ng-switch-when="help">
+      <h3>Maybe some day i will type up some help...</h3>
       <hr>
     </div>
   </div>
+</div>
 </div>
