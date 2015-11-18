@@ -18,12 +18,21 @@ app.config(['$routeProvider', function($routeProvider) {
       templateUrl: 'app/components/index/indexView.html',
       controller: 'IndexCtrl'
     })
+    .when('/main', {
+      templateUrl: 'app/components/main/mainView.html',
+      controller: 'MainCtrl',
+      resolve: {
+        'currentAuth': ['fireFactory', function(fireFactory) {
+          return fireFactory.auth.$requireAuth();
+        }]
+      }
+    })
     .when('/create', {
       templateUrl: 'app/components/create/createView.html',
       controller: 'CreateCtrl',
       resolve: {
         'currentAuth': ['fireFactory', function(fireFactory) {
-          return fireFactory.getAuth.$requireAuth();
+          return fireFactory.auth.$requireAuth();
         }]
       }
     })
@@ -32,7 +41,7 @@ app.config(['$routeProvider', function($routeProvider) {
       controller: 'QuizmeCtrl',
       resolve: {
         'currentAuth': ['fireFactory', function(fireFactory) {
-          return fireFactory.getAuth.$requireAuth();
+          return fireFactory.auth.$requireAuth();
         }]
       }
     })
@@ -41,60 +50,57 @@ app.config(['$routeProvider', function($routeProvider) {
     });
 }]);
 
-
+/**
+* All the props and methods relating to firebase authentication
+*/
 app.factory('fireFactory', ['$firebaseAuth', 'FBURL',
   function($firebaseAuth, FBURL) {
     var ref = new Firebase(FBURL);
+    var auth = $firebaseAuth(ref);
+
+    var user = {};
+    var authData = {};
 
     return {
-      getAuth: $firebaseAuth(ref),
-      getRef: ref
-    }
-
-}]);
-
-
-/** This needs to be refactored
-* Figure out how to take the user, throw it into the database, and keep the data for reuse in differ
-* different controllers. Shouldn't be as hard as you are making it
-*/
-app.service('userSvc', ['fireFactory', '$firebaseObject',
-  function(fireFactory, $firebaseObject) {
-
-    this.setUser = function(user) {
-      var userObj = {
-        data: {
-          username: user.google.email.split('@')[0],
-          displayname: user.google.displayName,
-          email: user.google.email,
-          picture: user.google.profileImageURL,
-          teacher: false
-        }
+      auth: auth,
+      ref: ref,
+      user: user,
+      authData: authData,
+      setUser: function(authData) {
+        user.username = authData.google.email.split('@')[0];
+        user.account = "student";
+        authData = authData;
+        ref.child('users').child(authData.uid).set(user);
+      },
+      logout: function() {
+        user = {};
+        authData = {};
       }
-      return fireFactory.getRef.child('users').child(user.uid).set(userObj);
     };
-
-    this.getUser = function(user) {
-      var userData = $firebaseObject(fireFactory.getRef.child('users').child(user.uid).child('data'));
-      return userData;
-    }
 
 }])
 
+/**
+* All the functions and methods related to pulling cards from firebase
+*/
 app.service('flashcardSvc', ['fireFactory', '$firebaseArray',
   function(fireFactory, $firebaseArray) {
     this.getFlashcards = function(user) {
-
-      return $firebaseArray(fireFactory.getRef.child('charts').child(user.uid));
+      return $firebaseArray(fireFactory.ref.child('charts').child(user.uid));
     }
 
     this.getPracticeCards = function(user) {
-      return $firebaseArray(fireFactory.getRef.child('flashcards')
+      return $firebaseArray(fireFactory.ref.child('flashcards')
         .child(user.google.email.split('@')[1].split('.')[0])
         .child(user.google.email.split('@')[0]));
     }
 }]);
 
+/**
+* Custom directive dealing with flashcards and how to flip them
+* TODO: Separate the HTML into a template
+* TODO: Change to an element that can be reused in various parts of the app
+*/
 app.directive('cardFlip', [function() {
   return {
     restrict: 'A',
@@ -107,37 +113,39 @@ app.directive('cardFlip', [function() {
   }
 }])
 
-app.controller('IndexCtrl', ['$scope', 'fireFactory', 'userSvc', 'flashcardSvc',
-  function($scope, fireFactory, userSvc, flashcardSvc) {
-  $scope.auth = fireFactory;
+app.controller('IndexCtrl', ['$scope', '$location', 'fireFactory',
+  function($scope, $location, fireFactory) {
 
-  $scope.auth.getAuth.$onAuth(function(authData) {
-    if(authData) {
-      var userData = userSvc.getUser(authData);
-      userData.$loaded().then(function(resp) {
-        if(userData.teacher) {
-          $scope.teacher = true;
-          $scope.flashcards = flashcardSvc.getFlashcards(authData);
-        } else if(!userData.username) {
-          userSvc.setUser(authData);
-          $scope.flashcards = flashcardSvc.getPracticeCards(authData);
-          console.log($scope.flashcards);
-        } else {
-          $scope.flashcards = flashcardSvc.getPracticeCards(authData);
-        }
-      });
-    } else {
-      $scope.teacher = false;
-      $scope.flashcards = undefined;
+    $scope.login = function() {
+      fireFactory.auth.$authWithOAuthPopup('google',{scope: 'email'});
     }
-    $scope.authData = authData;
-  });
 
+    fireFactory.auth.$onAuth(function(authData) {
+      if(authData) {
+        fireFactory.setUser(authData);
+        $location.path('/main');
+      }
+    });
+
+}]);
+
+app.controller('MainCtrl', ['$scope', 'fireFactory', 'flashcardSvc',
+  function($scope, fireFactory, flashcardSvc) {
+    $scope.authData = fireFactory.authData;
+    console.log($scope.authData);
+    $scope.logout = function() {
+      fireFactory.auth.$unauth();
+      fireFactory.logout();
+    }
+
+    fireFactory.auth.$onAuth(function(authData) {
+      $scope.authData = fireFactory.authData;
+    })
 }]);
 
 app.controller('CreateCtrl', ['$scope', '$location', 'fireFactory', function($scope, $location, fireFactory) {
   $scope.fireFactory = fireFactory;
-  $scope.fireFactory.getAuth.$onAuth(function(authData) {
+  $scope.fireFactory.auth.$onAuth(function(authData) {
     $scope.authData = authData;
   });
 
@@ -170,7 +178,7 @@ app.controller('CreateCtrl', ['$scope', '$location', 'fireFactory', function($sc
         }
         chartCards.push({front: key, back: answerObj[key]});
       }
-      fireFactory.getRef.child('charts').child($scope.authData.uid).push(chartCards);
+      fireFactory.ref.child('charts').child($scope.authData.uid).push(chartCards);
 
       for(var i = 0; i < data.length; i++) {
         var cardObj = {};
@@ -192,7 +200,7 @@ app.controller('CreateCtrl', ['$scope', '$location', 'fireFactory', function($sc
             cardObj.questions.push({front: key, back: data[i][key]});
           }
         }
-        fireFactory.getRef.child('flashcards').child(cardObj.domainName).child(cardObj.username).push(cardObj.questions);
+        fireFactory.ref.child('flashcards').child(cardObj.domainName).child(cardObj.username).push(cardObj.questions);
         //console.log(answerObj);
 
         }
@@ -203,7 +211,7 @@ app.controller('CreateCtrl', ['$scope', '$location', 'fireFactory', function($sc
 
 }]);
 
-app.controller('QuizmeCtrl', ['$scope', 'flashcardSvc', 'userSvc',
-  function($scope, flashcardSvc, userSvc) {
+app.controller('QuizmeCtrl', ['$scope', 'flashcardSvc', 'fireFactory',
+  function($scope, flashcardSvc, fireFactory) {
     //create a view for students to quiz themselves
 }]);

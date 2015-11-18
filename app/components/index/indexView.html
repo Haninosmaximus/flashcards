@@ -1,52 +1,7 @@
-<div ng-controller="IndexCtrl">
-<!-- navbar -->
-<div ng-show="authData" ng-cloak>
-  <div ng-include="'app/shared/navbarView.html'"></div>
-</div>
 <!-- Page specific -->
-<div class="container">
-  <div ng-cloak ng-show="!authData" class="jumbotron text-center">
+<div class="container" ng-controller="IndexCtrl">
+  <div class="jumbotron text-center">
     <h1>Flashcard App!</h1>
-    <button class="btn btn-danger" type="button" ng-click="auth.getAuth.$authWithOAuthPopup('google',{scope: 'email'})"><h3><span class="fa fa-google-plus"> | Get in!</span></h3></button>
+    <button class="btn btn-danger" type="button" ng-click="login()"><h3><span class="fa fa-google-plus"> | Get in!</span></h3></button>
   </div>
-
-  <div class="row" ng-show="authData">
-    <div class="col-sm-3">
-      <img ng-src="{{ authData.google.profileImageURL }}" class="img-responsive img-rounded" style="width:150px">
-    </div>
-    <div class="col-sm-9">
-      <h2>Welcome, {{ authData.google.displayName }}</h2>
-    </div>
-  </div>
-  <div ng-show="!teacher">
-    <hr style="border: 1px solid black">
-    <div class="row" ng-repeat="each in flashcards">
-      <div class="col-xs-4" ng-repeat="q in each">
-        <div class="flip">
-          <div class="card" card-flip>
-            <div class="face front">{{ q.front }}</div>
-            <div class="face back">{{ q.back }}</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div ng-show="teacher">
-    <hr style="border: 1px solid black;">
-    <table class="table table-striped table-hover">
-      <thead>
-        <tr>
-          <th>Quiz Title</th>
-          <th>Number of cards...</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr ng-repeat="each in flashcards">
-          <td>{{ each.title }}</td>
-          <td>{{ each.length }}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-</div>
 </div>
