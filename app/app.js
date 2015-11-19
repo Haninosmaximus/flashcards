@@ -36,15 +36,6 @@ app.config(['$routeProvider', function($routeProvider) {
         }]
       }
     })
-    .when('/:user/quizme', {
-      templateUrl: 'app/components/quizme/quizmeView.html',
-      controller: 'QuizmeCtrl',
-      resolve: {
-        'currentAuth': ['fireFactory', function(fireFactory) {
-          return fireFactory.auth.$requireAuth();
-        }]
-      }
-    })
     .otherwise({
       redirectTo: '/'
     });
@@ -56,29 +47,21 @@ app.config(['$routeProvider', function($routeProvider) {
 app.factory('fireFactory', ['$firebaseAuth', 'FBURL',
   function($firebaseAuth, FBURL) {
     var ref = new Firebase(FBURL);
-    var auth = $firebaseAuth(ref);
+    return $firebaseAuth(ref);
+}]);
 
+app.service('userService', ['FBURL',
+  function(FBURL) {
+    var ref = new Firebase(FBURL);
     var user = {};
-    var authData = {};
-
     return {
-      auth: auth,
-      ref: ref,
-      user: user,
-      authData: authData,
       setUser: function(authData) {
-        user.username = authData.google.email.split('@')[0];
+        user.username = authData.google.email;
         user.account = "student";
-        authData = authData;
         ref.child('users').child(authData.uid).set(user);
-      },
-      logout: function() {
-        user = {};
-        authData = {};
       }
-    };
-
-}])
+    }
+}]);
 
 /**
 * All the functions and methods related to pulling cards from firebase
@@ -115,32 +98,26 @@ app.directive('cardFlip', [function() {
 
 app.controller('IndexCtrl', ['$scope', '$location', 'fireFactory',
   function($scope, $location, fireFactory) {
+    console.log(fireFactory.auth.$getAuth());
 
     $scope.login = function() {
       fireFactory.auth.$authWithOAuthPopup('google',{scope: 'email'});
     }
 
     fireFactory.auth.$onAuth(function(authData) {
-      if(authData) {
-        fireFactory.setUser(authData);
-        $location.path('/main');
-      }
+      $location.path('/main');
     });
 
 }]);
 
 app.controller('MainCtrl', ['$scope', 'fireFactory', 'flashcardSvc',
   function($scope, fireFactory, flashcardSvc) {
-    $scope.authData = fireFactory.authData;
-    console.log($scope.authData);
+    $scope.authData = fireFactory;
+
     $scope.logout = function() {
       fireFactory.auth.$unauth();
-      fireFactory.logout();
     }
 
-    fireFactory.auth.$onAuth(function(authData) {
-      $scope.authData = fireFactory.authData;
-    })
 }]);
 
 app.controller('CreateCtrl', ['$scope', '$location', 'fireFactory', function($scope, $location, fireFactory) {
