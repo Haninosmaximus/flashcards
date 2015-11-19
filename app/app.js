@@ -44,13 +44,13 @@ app.config(['$routeProvider', function($routeProvider) {
 /**
 * All the props and methods relating to firebase authentication
 */
-app.factory('fireFactory', ['$firebaseAuth', 'FBURL',
+app.factory('FireFactory', ['$firebaseAuth', 'FBURL',
   function($firebaseAuth, FBURL) {
     var ref = new Firebase(FBURL);
     return $firebaseAuth(ref);
 }]);
 
-app.service('userService', ['FBURL',
+app.service('UserService', ['FBURL',
   function(FBURL) {
     var ref = new Firebase(FBURL);
     var user = {};
@@ -59,7 +59,11 @@ app.service('userService', ['FBURL',
         user.username = authData.google.email;
         user.account = "student";
         ref.child('users').child(authData.uid).set(user);
-      }
+      },
+      userInDb: function(user) {
+        return false;
+      },
+      user: user
     }
 }]);
 
@@ -96,15 +100,15 @@ app.directive('cardFlip', [function() {
   }
 }])
 
-app.controller('IndexCtrl', ['$scope', '$location', 'fireFactory',
-  function($scope, $location, fireFactory) {
-    console.log(fireFactory.auth.$getAuth());
+app.controller('IndexCtrl', ['$scope', '$location', 'FireFactory',
+  function($scope, $location, FireFactory) {
+    console.log(FireFactory.$getAuth());
 
     $scope.login = function() {
-      fireFactory.auth.$authWithOAuthPopup('google',{scope: 'email'});
+      FireFactory.$authWithOAuthPopup('google',{scope: 'email'});
     }
 
-    fireFactory.auth.$onAuth(function(authData) {
+    FireFactory.$onAuth(function(authData) {
       $location.path('/main');
     });
 
