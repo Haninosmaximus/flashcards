@@ -1,4 +1,3 @@
-<div ng-controller="MainCtrl">
 <div ng-include="'app/shared/navbarView.html'"></div>
 
 <div class="container">
@@ -8,9 +7,10 @@
     </div>
     <div class="col-sm-9">
       <h2>Welcome, {{ authData.google.displayName }}</h2>
+      <h5>{{ user.getUser().account }}</h5>
     </div>
   </div>
-  <div ng-show="authData.account === 'student'">
+  <div ng-show="user.getUser.account === 'student'">
     <hr style="border: 1px solid black">
     <div class="row" ng-repeat="each in flashcards">
       <div class="col-xs-4" ng-repeat="q in each">
@@ -23,7 +23,7 @@
       </div>
     </div>
   </div>
-  <div ng-show="authData.account === 'teacher'">
+  <div ng-show="user.getUser.account === 'teacher'">
     <hr style="border: 1px solid black;">
     <table class="table table-striped table-hover">
       <thead>
@@ -40,5 +40,4 @@
       </tbody>
     </table>
   </div>
-</div>
 </div>

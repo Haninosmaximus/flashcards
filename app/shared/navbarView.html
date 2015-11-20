@@ -13,8 +13,7 @@
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul class="nav navbar-nav">
         <li class="active"><a href="#/">Main</a></li>
-        <li><a ng-href="#/profile">Profile</a></li>
-        <li ng-show="authData.account === 'teacher'"><a href="#/create">Create new...</a></li>
+        <li ng-show="user.getUser().account === 'teacher'"><a href="#/create">Create new...</a></li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
         <li><a ng-click="auth.$unauth()">Logout</a></li>

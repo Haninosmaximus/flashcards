@@ -22,8 +22,8 @@ app.config(['$routeProvider', function($routeProvider) {
       templateUrl: 'app/components/main/mainView.html',
       controller: 'MainCtrl',
       resolve: {
-        'currentAuth': ['FireFactory', function(FireFactory) {
-          return FireFactory.$requireAuth();
+        'currentAuth': ['Auth', function(Auth) {
+          return Auth.$requireAuth();
         }]
       }
     })
@@ -31,8 +31,8 @@ app.config(['$routeProvider', function($routeProvider) {
       templateUrl: 'app/components/create/createView.html',
       controller: 'CreateCtrl',
       resolve: {
-        'currentAuth': ['FireFactory', function(FireFactory) {
-          return FireFactory.$requireAuth();
+        'currentAuth': ['Auth', function(Auth) {
+          return Auth.$requireAuth();
         }]
       }
     })
@@ -44,31 +44,39 @@ app.config(['$routeProvider', function($routeProvider) {
 /**
 * All the props and methods relating to firebase authentication
 */
-app.factory('FireFactory', ['$firebaseAuth', 'FBURL',
+app.factory('Auth', ['$firebaseAuth', 'FBURL',
   function($firebaseAuth, FBURL) {
     var ref = new Firebase(FBURL);
     return $firebaseAuth(ref);
 }]);
 
-app.factory('User', ['FBURL',
-  function(FBURL) {
-    var ref = new Firebase(FBURL);
-    var user = {};
+app.factory('User', ['FBURL', '$firebaseObject',
+  function(FBURL, $firebaseObject) {
+    var ref = new Firebase(FBURL + '/users');
+    var userData = {};
     return {
       setUser: function(authData) {
-        user.username = authData.google.email;
-        user.account = "student";
-        ref.child('users').child(authData.uid).set(user);
+        ref.child(authData.uid).once('value', function(snapshot) {
+          if(snapshot.exists()) {
+            userData = $firebaseObject(ref.child(authData.uid));
+            console.log(userData);
+          } else {
+            userData = {
+              email: authData.google.email,
+              avatar: authData.google.profileImageURL,
+              account: 'student'
+            }
+            console.log('new user');
+            ref.child(authData.uid).set(userData);
+          }
+        });
+        return userData;
       },
-      userInDb: function(user) {
-        return false;
-      },
-      user: user
+      getUser: function() {
+        return userData;
+      }
     }
 }]);
-
-
-
 
 /**
 * Custom directive dealing with flashcards and how to flip them
@@ -87,92 +95,107 @@ app.directive('cardFlip', [function() {
   }
 }])
 
-app.controller('IndexCtrl', ['$scope', '$location', 'FireFactory',
-  function($scope, $location, FireFactory) {
-    $scope.auth = FireFactory;
+app.controller('IndexCtrl', ['$scope', '$location', 'Auth', 'User',
+  function($scope, $location, Auth, User) {
+    $scope.auth = Auth;
 
-    // $scope.login = function() {
-    //   auth.$authWithOAuthPopup('google',{scope: 'email'});
-    // }
 
-    FireFactory.$onAuth(function(authData) {
-      $location.path('/main');
-    });
-
-}]);
-
-app.controller('MainCtrl', ['$scope', 'FireFactory',
-  function($scope, FireFactory) {
-    $scope.authData = FireFactory;
-
-}]);
-
-app.controller('CreateCtrl', ['$scope', '$location', 'FireFactory', 'FBURL',
-  function($scope, $location, FireFactory, FBURL) {
-  var ref = new Firebase(FBURL);
-
-  FireFactory.$onAuth(function(authData) {
-    $scope.authData = authData;
-  });
-
-  $scope.filesChanged = function(elm) {
-    $scope.csvFile = elm.files[0];
-    $scope.$apply();
-  }
-  $scope.create = function() {
-    $scope.jsonResult = true;
-    Papa.parse($scope.csvFile, {
-      header: true,
-      complete: function(result) {
-        filterCSV(result.data);    // this whole function needs to come out of the controller
-        $location.path('/#');
-        $scope.$apply();
+    $scope.auth.$onAuth(function(authData) {
+      if(authData) {
+        User.setUser(authData);
+        $location.path('/main');
       }
+
     });
 
-    function filterCSV(data) {
-      var answerObj = data.shift();
-      var chartCards = [];
+}]);
 
-      //change data in the answer object
-      delete answerObj["Username"];
-      delete answerObj["% Score"];
-      delete answerObj["Timestamp"];
-      for(var key in answerObj) {
-        if(!answerObj.hasOwnProperty(key)) {
-          continue;
+app.controller('MainCtrl', ['$scope', 'Auth', '$location', 'User',
+  function($scope, Auth, $location, User) {
+    $scope.auth = Auth;
+
+    $scope.auth.$onAuth(function(authData) {
+      if(authData) {
+        $scope.authData = authData;
+        $scope.user = User;
+      } else {
+        $location.path('/');
+      }
+    })
+}]);
+
+app.controller('CreateCtrl', ['$scope', '$location', 'Auth', 'FBURL', 'User',
+  function($scope, $location, Auth, FBURL, User) {
+    var ref = new Firebase(FBURL);
+    $scope.auth = Auth;
+    $scope.auth.$onAuth(function(authData) {
+      if(authData) {
+        $scope.authData = authData;
+        $scope.user = User;
+      } else {
+        $location.path('/');
+      }
+    })
+
+
+    $scope.filesChanged = function(elm) {
+      $scope.csvFile = elm.files[0];
+      $scope.$apply();
+    }
+    $scope.create = function() {
+      $scope.jsonResult = true;
+      Papa.parse($scope.csvFile, {
+        header: true,
+        complete: function(result) {
+          filterCSV(result.data);    // this whole function needs to come out of the controller
+          $location.path('/#');
+          $scope.$apply();
         }
-        chartCards.push({front: key, back: answerObj[key]});
-      }
-      ref.child('charts').child($scope.authData.uid).push(chartCards);
+      });
 
-      for(var i = 0; i < data.length; i++) {
-        var cardObj = {};
-        if(data[i]["Username"]) {
-          cardObj.domainName = data[i]["Username"].split('@')[1].split('.')[0];
-          cardObj.username = data[i]["Username"].split('@')[0];
+      function filterCSV(data) {
+        var answerObj = data.shift();
+        var chartCards = [];
 
-        cardObj.questions = [];
-
-
-        //change data into a front and back card
-        for(var key in data[i]) {
-          if(!data[i].hasOwnProperty(key)) {
+        //change data in the answer object
+        delete answerObj["Username"];
+        delete answerObj["% Score"];
+        delete answerObj["Timestamp"];
+        for(var key in answerObj) {
+          if(!answerObj.hasOwnProperty(key)) {
             continue;
           }
-          if(data[i][key] == 0) {
-            cardObj.questions.push({front: key, back: answerObj[key]});
-          } else {
-            cardObj.questions.push({front: key, back: data[i][key]});
+          chartCards.push({front: key, back: answerObj[key]});
+        }
+        ref.child('charts').child($scope.authData.uid).push(chartCards);
+
+        for(var i = 0; i < data.length; i++) {
+          var cardObj = {};
+          if(data[i]["Username"]) {
+            cardObj.domainName = data[i]["Username"].split('@')[1].split('.')[0];
+            cardObj.username = data[i]["Username"].split('@')[0];
+
+          cardObj.questions = [];
+
+
+          //change data into a front and back card
+          for(var key in data[i]) {
+            if(!data[i].hasOwnProperty(key)) {
+              continue;
+            }
+            if(data[i][key] == 0) {
+              cardObj.questions.push({front: key, back: answerObj[key]});
+            } else {
+              cardObj.questions.push({front: key, back: data[i][key]});
+            }
+          }
+          ref.child('flashcards').child(cardObj.domainName).child(cardObj.username).push(cardObj.questions);
+          //console.log(answerObj);
+
           }
         }
-        ref.child('flashcards').child(cardObj.domainName).child(cardObj.username).push(cardObj.questions);
-        //console.log(answerObj);
 
-        }
       }
-
     }
-  }
 
 }]);
