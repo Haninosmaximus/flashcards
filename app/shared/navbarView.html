@@ -17,7 +17,7 @@
         <li ng-show="authData.account === 'teacher'"><a href="#/create">Create new...</a></li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
-        <li><a ng-click="logout()">Logout</a></li>
+        <li><a ng-click="auth.$unauth()">Logout</a></li>
         <li><a href="#/about">About</a></li>
       </ul>
     </div>
