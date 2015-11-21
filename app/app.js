@@ -59,7 +59,6 @@ app.factory('User', ['FBURL', '$firebaseObject',
         ref.child(authData.uid).once('value', function(snapshot) {
           if(snapshot.exists()) {
             userData = $firebaseObject(ref.child(authData.uid));
-            console.log(userData);
           } else {
             userData = {
               email: authData.google.email,
@@ -75,6 +74,19 @@ app.factory('User', ['FBURL', '$firebaseObject',
       getUser: function() {
         return userData;
       }
+    }
+}]);
+
+app.service('FlashcardService', ['FBURL', '$firebaseArray',
+  function(FBURL, $firebaseArray) {
+    var ref = new Firebase(FBURL);
+
+    this.getStudentCards = function() {
+      return $firebaseArray(ref.child('/studentcards'));
+    }
+
+    this.getTeacherCards = function(user) {
+      return $firebaseArray(ref.child('/teachercards/' + user));
     }
 }]);
 
@@ -99,7 +111,6 @@ app.controller('IndexCtrl', ['$scope', '$location', 'Auth', 'User',
   function($scope, $location, Auth, User) {
     $scope.auth = Auth;
 
-
     $scope.auth.$onAuth(function(authData) {
       if(authData) {
         User.setUser(authData);
@@ -110,18 +121,26 @@ app.controller('IndexCtrl', ['$scope', '$location', 'Auth', 'User',
 
 }]);
 
-app.controller('MainCtrl', ['$scope', 'Auth', '$location', 'User',
-  function($scope, Auth, $location, User) {
+app.controller('MainCtrl', ['$scope', 'Auth', '$location', 'User', 'FlashcardService',
+  function($scope, Auth, $location, User, FlashcardService) {
     $scope.auth = Auth;
 
     $scope.auth.$onAuth(function(authData) {
       if(authData) {
         $scope.authData = authData;
         $scope.user = User;
+        console.log($scope.user.getUser());
+
+        if($scope.user.getUser().account === 'teacher') {
+          $scope.flashcards = FlashcardService.getTeacherCards(authData.uid);
+        } else {
+          $scope.flashcards = FlashcardService.getStudentCards();
+        }
       } else {
         $location.path('/');
       }
-    })
+    });
+
 }]);
 
 app.controller('CreateCtrl', ['$scope', '$location', 'Auth', 'FBURL', 'User',
@@ -142,55 +161,51 @@ app.controller('CreateCtrl', ['$scope', '$location', 'Auth', 'FBURL', 'User',
       $scope.csvFile = elm.files[0];
       $scope.$apply();
     }
-    $scope.create = function() {
-      $scope.jsonResult = true;
+    $scope.create = function(title) {
+
       Papa.parse($scope.csvFile, {
         header: true,
         complete: function(result) {
-          filterCSV(result.data);    // this whole function needs to come out of the controller
-          $location.path('/#');
+          filterCSV(title, result.data);    // this whole function needs to come out of the controller
+          $location.path('/main');
           $scope.$apply();
         }
       });
 
-      function filterCSV(data) {
+      function filterCSV(title, data) {
         var answerObj = data.shift();
-        var chartCards = [];
+        var chartCards = {"title": title, "cards": []};
 
         //change data in the answer object
         delete answerObj["Username"];
-        delete answerObj["% Score"];
-        delete answerObj["Timestamp"];
         for(var key in answerObj) {
           if(!answerObj.hasOwnProperty(key)) {
             continue;
           }
-          chartCards.push({front: key, back: answerObj[key]});
+          chartCards.cards.push({front: key, back: answerObj[key]});
         }
-        ref.child('charts').child($scope.authData.uid).push(chartCards);
+        ref.child('teachercards').child($scope.authData.uid).push(chartCards);
 
         for(var i = 0; i < data.length; i++) {
           var cardObj = {};
           if(data[i]["Username"]) {
-            cardObj.domainName = data[i]["Username"].split('@')[1].split('.')[0];
-            cardObj.username = data[i]["Username"].split('@')[0];
+            cardObj.username = data[i]["Username"];
+            delete data[i]["Username"];
+            cardObj.questions = [];
 
-          cardObj.questions = [];
-
-
-          //change data into a front and back card
-          for(var key in data[i]) {
-            if(!data[i].hasOwnProperty(key)) {
-              continue;
+            //change data into a front and back card
+            for(var key in data[i]) {
+              if(!data[i].hasOwnProperty(key)) {
+                continue;
+              }
+              if(data[i][key] == 0) {
+                cardObj.questions.push({front: key, back: answerObj[key]});
+              } else if(data[i][key] != 1) {
+                cardObj.questions.push({front: key, back: data[i][key]});
+              }
             }
-            if(data[i][key] == 0) {
-              cardObj.questions.push({front: key, back: answerObj[key]});
-            } else {
-              cardObj.questions.push({front: key, back: data[i][key]});
-            }
-          }
-          ref.child('flashcards').child(cardObj.domainName).child(cardObj.username).push(cardObj.questions);
-          //console.log(answerObj);
+            ref.child('studentcards').push(cardObj);
+            //console.log(answerObj);
 
           }
         }

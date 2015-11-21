@@ -72,10 +72,11 @@
         <input type="file" class="form-control" id="fileInput" onchange="angular.element(this).scope().filesChanged(this)" accept=".csv">
       </div>
       <div class="form-group">
-        <button type="button" class="btn btn-primary btn-block" ng-click="create()">Open CSV</button>
+        <button type="button" class="btn btn-primary btn-block" ng-click="create(title)">Open CSV</button>
       </div>
       <hr>
     </div>
+    <!-- help tab -->
     <div ng-switch-when="help">
       <h3>Maybe some day i will type up some help...</h3>
       <hr>
