@@ -115,8 +115,10 @@ app.controller('IndexCtrl', ['$scope', '$location', 'Auth', 'User',
       if(authData) {
         User.setUser(authData);
         $location.path('/main');
-      }
+      } else {
+        $location.path('/');
 
+      }
     });
 
 }]);
@@ -125,21 +127,21 @@ app.controller('MainCtrl', ['$scope', 'Auth', '$location', 'User', 'FlashcardSer
   function($scope, Auth, $location, User, FlashcardService) {
     $scope.auth = Auth;
 
-    $scope.auth.$onAuth(function(authData) {
-      if(authData) {
-        $scope.authData = authData;
-        $scope.user = User;
-        console.log($scope.user.getUser());
+    // $scope.auth.$onAuth(function(authData) {
+    //   if(authData) {
+    //     $scope.authData = authData;
+    //     $scope.user = User;
+    //     console.log($scope.user.getUser());
 
-        if($scope.user.getUser().account === 'teacher') {
-          $scope.flashcards = FlashcardService.getTeacherCards(authData.uid);
-        } else {
-          $scope.flashcards = FlashcardService.getStudentCards();
-        }
-      } else {
-        $location.path('/');
-      }
-    });
+    //     if($scope.user.getUser().account === 'teacher') {
+    //       $scope.flashcards = FlashcardService.getTeacherCards(authData.uid);
+    //     } else {
+    //       $scope.flashcards = FlashcardService.getStudentCards();
+    //     }
+    //   } else {
+    //     $location.path('/');
+    //   }
+    // });
 
 }]);
 
