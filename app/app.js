@@ -43,6 +43,33 @@ app.config(['$routeProvider', function($routeProvider) {
 
 /**
 * All the props and methods relating to firebase authentication
+*
+Example from SO:
+angular.module('.....')
+  .factory('UserDataService', function($q, $firebase, $firebaseAuth, FIREBASE_URL) {
+    var authData = {};
+
+    function authDataCallback(data) {
+      if (data) {
+        var ref = new Firebase(FIREBASE_URL + "/userProfiles/" + data.uid);
+        ref.on("value", function(snapshot) {
+          authData = snapshot.val();
+          //[see comment] var authData = snapshot.val();
+        });
+
+      } else {
+        console.log("User is logged out");
+      }
+    }
+
+    // Register the callback to be fired every time auth state changes
+    var ref = new Firebase(FIREBASE_URL);
+    ref.onAuth(authDataCallback);
+
+    return {
+        authData: authData
+    };
+});
 */
 app.factory('Auth', ['$firebaseAuth', 'FBURL',
   function($firebaseAuth, FBURL) {
@@ -54,6 +81,7 @@ app.factory('User', ['FBURL', '$firebaseObject',
   function(FBURL, $firebaseObject) {
     var ref = new Firebase(FBURL + '/users');
     var userData = {};
+
     return {
       setUser: function(authData) {
         ref.child(authData.uid).once('value', function(snapshot) {
@@ -69,7 +97,6 @@ app.factory('User', ['FBURL', '$firebaseObject',
             ref.child(authData.uid).set(userData);
           }
         });
-        return userData;
       },
       getUser: function() {
         return userData;
@@ -113,8 +140,10 @@ app.controller('IndexCtrl', ['$scope', '$location', 'Auth', 'User',
 
     $scope.auth.$onAuth(function(authData) {
       if(authData) {
+        console.log(authData);
         User.setUser(authData);
         $location.path('/main');
+
       } else {
         $location.path('/');
 
@@ -127,21 +156,14 @@ app.controller('MainCtrl', ['$scope', 'Auth', '$location', 'User', 'FlashcardSer
   function($scope, Auth, $location, User, FlashcardService) {
     $scope.auth = Auth;
 
-    // $scope.auth.$onAuth(function(authData) {
-    //   if(authData) {
-    //     $scope.authData = authData;
-    //     $scope.user = User;
-    //     console.log($scope.user.getUser());
+    $scope.authData = Auth.$getAuth();
+    $scope.user = User.getUser();
 
-    //     if($scope.user.getUser().account === 'teacher') {
-    //       $scope.flashcards = FlashcardService.getTeacherCards(authData.uid);
-    //     } else {
-    //       $scope.flashcards = FlashcardService.getStudentCards();
-    //     }
-    //   } else {
-    //     $location.path('/');
-    //   }
-    // });
+    if(User.getUser().account === 'teacher') {
+      $scope.flashcards = FlashcardService.getTeacherCards($scope.authData.uid);
+    } else if (User.getUser().account === 'student') {
+      $scope.flashcards = FlashcardService.getStudentCards();
+    }
 
 }]);
 
@@ -149,14 +171,7 @@ app.controller('CreateCtrl', ['$scope', '$location', 'Auth', 'FBURL', 'User',
   function($scope, $location, Auth, FBURL, User) {
     var ref = new Firebase(FBURL);
     $scope.auth = Auth;
-    $scope.auth.$onAuth(function(authData) {
-      if(authData) {
-        $scope.authData = authData;
-        $scope.user = User;
-      } else {
-        $location.path('/');
-      }
-    })
+    $scope.authData = Auth.$getAuth();
 
 
     $scope.filesChanged = function(elm) {
