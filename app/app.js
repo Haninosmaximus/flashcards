@@ -149,11 +149,15 @@ app.service('FlashcardService', ['FBURL', '$firebaseArray',
     }
 
     this.getTeacherCards = function(user) {
-      return $firebaseArray(ref.child('/teachercards/' + user));
+      return $firebaseArray(ref.child('/teachercards').child(user));
     }
 
-    this.getCardsByKey = function(key) {
-      return $firebaseArray(ref.child('/teachercards/' + key));
+    this.setTeacherCards = function(user, cards) {
+      $firebaseArray(ref.child('/teachercards').child(user)).$add(cards);
+    }
+
+    this.getCardsByKey = function(user, key) {
+      return $firebaseArray(ref.child('/teachercards').child(user).child(key).child('cards'));
     }
 }]);
 
@@ -191,17 +195,21 @@ app.controller('MainCtrl', ['$scope', '$location', 'Auth', 'UserData', 'Flashcar
     $scope.userData = UserData($scope.authData.uid);
 
     $scope.userData.$loaded().then(function(response) {
-      if(response.account === 'teacher') {
-        $scope.flashcards = FlashcardService.getTeacherCards(response.$id);
+      if($scope.userData.account === 'teacher') {
+        $scope.teachercards = FlashcardService.getTeacherCards($scope.authData.uid);
       } else {
-        $scope.flashcards = FlashcardService.getStudentCards();
+        $scope.studentcards = FlashcardService.getStudentCards();
       }
     });
 
-    $scope.listLink = function(id) {
-      $location.path('/main/' + id);
-    }
+    // $scope.listLink = function(id) {
+    //   $location.path('/main/' + id);
+    // }
 
+    $scope.listLink = function(id) {
+      $scope.studentcards = FlashcardService.getCardsByKey($scope.authData.uid, id);
+      console.log($scope.studentcards);
+    }
 }]);
 
 app.controller('CreateCtrl', ['$scope', '$location', 'Auth', 'FlashcardService',
@@ -209,6 +217,7 @@ app.controller('CreateCtrl', ['$scope', '$location', 'Auth', 'FlashcardService',
 
     $scope.auth = Auth;
     $scope.authData = Auth.$getAuth();
+    $scope.flashcards = {"cards": []};
 
     $scope.filesChanged = function(elm) {
       $scope.csvFile = elm.files[0];
@@ -216,7 +225,6 @@ app.controller('CreateCtrl', ['$scope', '$location', 'Auth', 'FlashcardService',
     }
 
     $scope.create = function(title) {
-
       Papa.parse($scope.csvFile, {
         header: true,
         complete: function(result) {
@@ -226,6 +234,13 @@ app.controller('CreateCtrl', ['$scope', '$location', 'Auth', 'FlashcardService',
         }
       });
     }
+
+    $scope.saveCardPack = function(title, flashcards) {
+      flashcards.title = title;
+      FlashcardService.setTeacherCards($scope.authData.uid, flashcards);
+      $location.path('/main');
+    }
+
 }]);
 
 app.controller('FlashcardsCtrl', ['$scope', '$routeParams', 'Auth', 'FlashcardService',
@@ -233,6 +248,8 @@ app.controller('FlashcardsCtrl', ['$scope', '$routeParams', 'Auth', 'FlashcardSe
 
     $scope.auth = Auth;
 
-    //$scope.flashcards = FlashcardService.getAllCards();
+    $scope.authData = Auth.$getAuth();
+
+    $scope.flashcards = FlashcardService.getCardsByKey($scope.authData.uid, $routeParams.flashcardKey);
 
 }]);

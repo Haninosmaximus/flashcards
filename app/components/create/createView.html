@@ -2,60 +2,54 @@
 <div class="container">
   <h2>{{ authData.google.displayName }} - Create your quiz below</h2>
   <ul class="nav nav-tabs" ng-init="active.tab = 'upload'">
-    <li ng-class="{active: active.tab === 'create'}" class="disabled" ng-click="active.tab = 'create'"><a>Create your quiz UNDER CONSTRUCTION!!</a></li>
+    <li ng-class="{active: active.tab === 'create'}" class="disabled" ng-click="active.tab = 'create'"><a>Create your quiz</a></li>
     <li ng-class="{active: active.tab === 'upload'}" ng-click="active.tab = 'upload'"><a>Upload from CSV file</a></li>
     <li ng-class="{active: active.tab === 'help'}" ng-click="active.tab = 'help'"><a>Need help?</a></li>
   </ul>
   <div class="tabContent" ng-switch="active.tab">
     <div ng-switch-when="create">
       <div class="row">
-        <div class="col-md-12">
-        <div class="alert alert-danger">
-          <strong>Under construction!</strong> Just for testing right now.
-        </div>
+      <form ng-submit="saveCardPack(title, flashcards)">
+        <div class="col-md-10">
           <div class="form-group">
             <label for="cardsTitle">Give your list of flashcards a title...</label>
-            <input id="cardsTitle" class="form-control">
+            <input id="cardsTitle" class="form-control" ng-model="title">
           </div>
-        </div>
-        <br>
-        <div class="col-md-6">
-          <div class="form-group">
-            <label for="frontText">Text for the front of your card below...</label>
-            <textarea class="form-control" id="frontText" ng-model="card.front"></textarea>
+
+          <div class="col-md-4">
+            <div class="form-group">
+              <label for="frontText">Text for the front of your card below...</label>
+              <textarea class="form-control" id="frontText" ng-model="front"></textarea>
+            </div>
           </div>
-        </div>
-        <div class="col-md-6">
-          <div class="form-group">
-            <label for="backText"><b>Text for the back of your card below...</b></label>
-            <textarea class="form-control" id="backText" ng-model="card.back"></textarea>
-          </div>
-        </div>
-        <div class="form-group">
-          <div class="col-md-8 col-md-offset-2">
-            <a class="btn btn-primary">Add</a>
-            <a class="btn btn-success">Save</a>
-          </div>
-        </div>
-      </div>
-      <hr>
-      <!-- i need to break these cards into one simple <card-flip> type directive -->
-      <div class="row">
-        <div class="col-xs-12">
-          <div class="flip">
-            <div class="card" card-flip>
-              <div class="face front">{{ card.front }}</div>
-              <div class="face back">{{ card.back }}</div>
+ <div class="col-md-2">
+            <div class="form-group text-center">
+     <a class="btn btn-primary" ng-click="flashcards.cards.push({front: front, back: back})"><h1> + </h1></a>
+   </div>
+ </div>
+          <div class="col-md-4">
+            <div class="form-group">
+              <label for="backText"><b>Text for the back of your card below...</b></label>
+              <textarea class="form-control" id="backText" ng-model="back"></textarea>
             </div>
           </div>
         </div>
-      </div>
+
+          <div class="col-md-2" ng-show="flashcards.cards.length > 0">
+            <div class="form-group">
+              <button type="submit" class="btn btn-success">Save</button>
+            </div>
+          </div>
+        </form>
+        </div>
+      <hr>
       <div class="row">
-        <div class="col-xs-3" ng-repeat="each in flashcards">
-          <div class="flip" ng-repeat="q in each">
+      <h3 class="text-center">{{ title }}</h3>
+        <div class="col-xs-3" ng-repeat="each in flashcards.cards">
+          <div class="flip">
             <div class="card" card-flip>
-              <div class="face front">{{ q.front }}</div>
-              <div class="face back">{{ q.back }}</div>
+              <div class="face front">{{ each.front }}</div>
+              <div class="face back">{{ each.back }}</div>
             </div>
           </div>
         </div>
@@ -78,8 +72,9 @@
     </div>
     <!-- help tab -->
     <div ng-switch-when="help">
-      <h3>Maybe some day i will type up some help...</h3>
-      <hr>
+      <div class="embed-responsive embed-responsive-16by9">
+        <iframe class="embed-responsive-item" width="560" height="315" src="https://www.youtube.com/embed/JSuyMPAf-t0" frameborder="0" allowfullscreen></iframe>
+      </div>
     </div>
   </div>
 </div>
