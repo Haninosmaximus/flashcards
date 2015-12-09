@@ -18,6 +18,10 @@ app.config(['$routeProvider', function($routeProvider) {
       templateUrl: 'app/components/index/indexView.html',
       controller: 'IndexCtrl'
     })
+    .when('/register', {
+      templateUrl: 'app/components/register/registerView.html',
+      controller: 'RegisterCtrl'
+    })
     .when('/main', {
       templateUrl: 'app/components/main/mainView.html',
       controller: 'MainCtrl',
@@ -107,7 +111,7 @@ app.service('FlashcardService', ['FBURL', '$firebaseArray',
 
     this.filterCSV = function (title, data, uid) {
       var answerObj = data.shift();
-      var chartCards = {"title": title, "cards": []};
+      var chartCards = {"title": title, "allcards": [], "studentcards": []};
 
       //change data in the answer object
       delete answerObj["Username"];
@@ -115,10 +119,9 @@ app.service('FlashcardService', ['FBURL', '$firebaseArray',
         if(!answerObj.hasOwnProperty(key)) {
           continue;
         }
-        chartCards.cards.push({front: key, back: answerObj[key]});
+        chartCards.allcards.push({front: key, back: answerObj[key]});
       }
 
-      ref.child('teachercards').child(uid).push(chartCards);
 
       for(var i = 0; i < data.length; i++) {
         var cardObj = {};
@@ -138,9 +141,13 @@ app.service('FlashcardService', ['FBURL', '$firebaseArray',
               cardObj.questions.push({front: key, back: data[i][key]});
             }
           }
-          ref.child('studentcards').push(cardObj);
+          chartCards.studentcards.push(cardObj);
         }
+
       }
+      ref.child('teachercards').child(uid).push(chartCards);
+      ref.child('studentcards').push(chartCards.studentcards);
+      ref.child('allcards').push({title: chartCards.title, uid: uid, cards: chartCards.allcards});
 
     }
 
@@ -152,12 +159,12 @@ app.service('FlashcardService', ['FBURL', '$firebaseArray',
       return $firebaseArray(ref.child('/teachercards').child(user));
     }
 
-    this.setTeacherCards = function(user, cards) {
-      $firebaseArray(ref.child('/teachercards').child(user)).$add(cards);
-    }
-
     this.getCardsByKey = function(user, key) {
       return $firebaseArray(ref.child('/teachercards').child(user).child(key).child('cards'));
+    }
+
+    this.getAllCards = function() {
+      return $firebaseArray(ref.child('allcards'));
     }
 }]);
 
@@ -195,20 +202,18 @@ app.controller('MainCtrl', ['$scope', '$location', 'Auth', 'UserData', 'Flashcar
     $scope.userData = UserData($scope.authData.uid);
 
     $scope.userData.$loaded().then(function(response) {
-      if($scope.userData.account === 'teacher') {
-        $scope.teachercards = FlashcardService.getTeacherCards($scope.authData.uid);
-      } else {
+      if($scope.userData.account === 'student') {
         $scope.studentcards = FlashcardService.getStudentCards();
+        console.log($scope.studentcards);
+      } else {
+        $scope.teachercards = FlashcardService.getTeacherCards($scope.authData.uid);
       }
     });
 
-    // $scope.listLink = function(id) {
-    //   $location.path('/main/' + id);
-    // }
+    $scope.allcards = FlashcardService.getAllCards();
 
     $scope.listLink = function(id) {
       $scope.studentcards = FlashcardService.getCardsByKey($scope.authData.uid, id);
-      console.log($scope.studentcards);
     }
 }]);
 
@@ -228,7 +233,7 @@ app.controller('CreateCtrl', ['$scope', '$location', 'Auth', 'FlashcardService',
       Papa.parse($scope.csvFile, {
         header: true,
         complete: function(result) {
-          FlashcardService.filterCSV(title, result.data, $scope.authData.uid);    // this whole function needs to come out of the controller
+          FlashcardService.filterCSV(title, result.data, $scope.authData.uid);
           $location.path('/main');
           $scope.$apply();
         }
@@ -251,5 +256,10 @@ app.controller('FlashcardsCtrl', ['$scope', '$routeParams', 'Auth', 'FlashcardSe
     $scope.authData = Auth.$getAuth();
 
     $scope.flashcards = FlashcardService.getCardsByKey($scope.authData.uid, $routeParams.flashcardKey);
+
+}]);
+
+app.controller('RegisterCtrl', ['$scope', function($scope) {
+
 
 }]);
