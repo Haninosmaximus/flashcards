@@ -1,6 +1,6 @@
 var app = angular.module('FlashcardApp', ['ngRoute', 'firebase']);
 
-app.constant('FBURL', 'https://quizlet-flashcards.firebaseio.com');
+app.constant('FBURL', 'https://flashcardmaker.firebaseio.com/');
 
 app.run(["$rootScope", "$location", function($rootScope, $location) {
   $rootScope.$on("$routeChangeError", function(event, next, previous, error) {
@@ -73,15 +73,11 @@ app.factory('User', ['Auth', 'FBURL', '$location', '$firebaseObject',
 
         userData.$loaded().then(function(response) {
           if(!userData.account) {
-            userData.email = data.google.email;
-            userData.displayName = data.google.displayName;
-            userData.account = 'student';
-            userData.$save();
+            $location.path('/register');
+          } else {
+            $location.path('/main');
           }
         });
-
-        $location.path('/main');
-
       } else {
         userData = {};
         console.log('user is logged out');
@@ -96,17 +92,14 @@ app.factory('User', ['Auth', 'FBURL', '$location', '$firebaseObject',
 
 app.factory('UserData', ['$firebaseObject', 'FBURL',
   function($firebaseObject, FBURL) {
-
+    var ref = new Firebase(FBURL + '/users');
     return function(user) {
-      var ref = new Firebase(FBURL + '/users/' + user);
-
-      return $firebaseObject(ref);
+      return $firebaseObject(ref.child(user));
     }
+}]);
 
-}])
-
-app.service('FlashcardService', ['FBURL', '$firebaseArray',
-  function(FBURL, $firebaseArray) {
+app.service('FlashcardService', ['FBURL', '$firebaseArray', '$firebaseObject',
+  function(FBURL, $firebaseArray, $firebaseObject) {
     var ref = new Firebase(FBURL);
 
     this.filterCSV = function (title, data, uid) {
@@ -152,11 +145,11 @@ app.service('FlashcardService', ['FBURL', '$firebaseArray',
     }
 
     this.getStudentCards = function() {
-      return $firebaseArray(ref.child('/studentcards'));
+      return $firebaseObject(ref.child('/studentcards'));
     }
 
     this.getTeacherCards = function(user) {
-      return $firebaseArray(ref.child('/teachercards').child(user));
+      return $firebaseArray(ref.child('/teachercards/' + user));
     }
 
     this.getCardsByKey = function(user, key) {
@@ -201,20 +194,8 @@ app.controller('MainCtrl', ['$scope', '$location', 'Auth', 'UserData', 'Flashcar
 
     $scope.userData = UserData($scope.authData.uid);
 
-    $scope.userData.$loaded().then(function(response) {
-      if($scope.userData.account === 'student') {
-        $scope.studentcards = FlashcardService.getStudentCards();
-        console.log($scope.studentcards);
-      } else {
-        $scope.teachercards = FlashcardService.getTeacherCards($scope.authData.uid);
-      }
-    });
+    $scope.teachercards = FlashcardService.getStudentCards();
 
-    $scope.allcards = FlashcardService.getAllCards();
-
-    $scope.listLink = function(id) {
-      $scope.studentcards = FlashcardService.getCardsByKey($scope.authData.uid, id);
-    }
 }]);
 
 app.controller('CreateCtrl', ['$scope', '$location', 'Auth', 'FlashcardService',
@@ -259,7 +240,17 @@ app.controller('FlashcardsCtrl', ['$scope', '$routeParams', 'Auth', 'FlashcardSe
 
 }]);
 
-app.controller('RegisterCtrl', ['$scope', function($scope) {
+app.controller('RegisterCtrl', ['$scope', '$location', 'Auth', 'UserData', function($scope, $location, Auth, UserData) {
 
+  $scope.authData = Auth.$getAuth();
 
+  $scope.registerUser = function() {
+    var user = UserData($scope.authData.uid);
+    user.email = $scope.authData.google.email;
+    user.displayName = $scope.authData.google.displayName;
+    user.account = $scope.user.account;
+
+    user.$save();
+    $location.path('/');
+  }
 }]);
