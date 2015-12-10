@@ -69,10 +69,11 @@ app.factory('User', ['Auth', 'FBURL', '$location', '$firebaseObject',
     function authDataCallback(data) {
       if(data) {
 
-        userData = $firebaseObject(ref.child(data.uid));
+        userData = $firebaseObject(ref.child(emailKey(data.google.email)));
 
         userData.$loaded().then(function(response) {
           if(!userData.account) {
+            userData.emailKey = emailKey(data.google.email);
             $location.path('/register');
           } else {
             $location.path('/main');
@@ -85,6 +86,11 @@ app.factory('User', ['Auth', 'FBURL', '$location', '$firebaseObject',
       }
       return userData;
     }
+
+    function emailKey(email) {
+      return encodeURIComponent(email.replace('.', ','));
+    }
+
     Auth.$onAuth(authDataCallback);
 
     return userData;
@@ -245,7 +251,7 @@ app.controller('RegisterCtrl', ['$scope', '$location', 'Auth', 'UserData', funct
   $scope.authData = Auth.$getAuth();
 
   $scope.registerUser = function() {
-    var user = UserData($scope.authData.uid);
+    var user = UserData();
     user.email = $scope.authData.google.email;
     user.displayName = $scope.authData.google.displayName;
     user.account = $scope.user.account;
