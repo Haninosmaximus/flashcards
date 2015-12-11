@@ -4,8 +4,6 @@ app.constant('FBURL', 'https://flashcardmaker.firebaseio.com/');
 
 app.run(["$rootScope", "$location", function($rootScope, $location) {
   $rootScope.$on("$routeChangeError", function(event, next, previous, error) {
-    // We can catch the error thrown when the $requireAuth promise is rejected
-    // and redirect the user back to the home page
     if (error === "AUTH_REQUIRED") {
       $location.path("/");
     }
@@ -64,44 +62,42 @@ app.factory('Auth', ['$firebaseAuth', 'FBURL',
 app.factory('User', ['Auth', 'FBURL', '$location', '$firebaseObject',
   function(Auth, FBURL, $location, $firebaseObject) {
     var userData = {};
+    var authData = {};
+
     var ref = new Firebase(FBURL + '/users/');
 
     function authDataCallback(data) {
       if(data) {
+        authData = data;
 
-        userData = $firebaseObject(ref.child(emailKey(data.google.email)));
-
-        userData.$loaded().then(function(response) {
-          if(!userData.account) {
-            userData.emailKey = emailKey(data.google.email);
-            $location.path('/register');
-          } else {
+        ref.child(encodeEmail(data.google.email)).once('value', function(snap) {
+          if(snap.exists()) {
+            userData = snap.val();
             $location.path('/main');
+          } else {
+            userData.encodedEmail = encodeEmail(data.google.email);
+            $location.path('/register');
           }
         });
       } else {
         userData = {};
-        console.log('user is logged out');
+        authData = {};
         $location.path('/');
       }
       return userData;
     }
 
-    function emailKey(email) {
-      return encodeURIComponent(email.replace('.', ','));
+    function encodeEmail(email) {
+      return encodeURIComponent(email.replace(/(\.)/g, ','));
+    }
+
+    function decodeEmail(email) {
+      return decodeURIComponent(email).replace(/(,)/g, '.');
     }
 
     Auth.$onAuth(authDataCallback);
 
     return userData;
-}]);
-
-app.factory('UserData', ['$firebaseObject', 'FBURL',
-  function($firebaseObject, FBURL) {
-    var ref = new Firebase(FBURL + '/users');
-    return function(user) {
-      return $firebaseObject(ref.child(user));
-    }
 }]);
 
 app.service('FlashcardService', ['FBURL', '$firebaseArray', '$firebaseObject',
@@ -246,17 +242,19 @@ app.controller('FlashcardsCtrl', ['$scope', '$routeParams', 'Auth', 'FlashcardSe
 
 }]);
 
-app.controller('RegisterCtrl', ['$scope', '$location', 'Auth', 'UserData', function($scope, $location, Auth, UserData) {
+app.controller('RegisterCtrl', ['$scope', '$location', 'Auth', 'User', 'FBURL', function($scope, $location, Auth, User, FBURL) {
 
   $scope.authData = Auth.$getAuth();
-
+  console.log($scope.authData);
   $scope.registerUser = function() {
-    var user = UserData();
-    user.email = $scope.authData.google.email;
-    user.displayName = $scope.authData.google.displayName;
-    user.account = $scope.user.account;
 
-    user.$save();
-    $location.path('/');
+    var userData = User;
+
+    userData.email = $scope.authData.google.email;
+    userData.account = $scope.user.account;
+    userData.displayName = $scope.authData.google.displayName;
+
+    var ref = new Firebase(FBURL + '/users/' + userData.encodedEmail);
+    ref.set(userData);
   }
 }]);
