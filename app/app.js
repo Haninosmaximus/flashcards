@@ -59,40 +59,33 @@ app.factory('Auth', ['$firebaseAuth', 'FBURL',
     return $firebaseAuth(ref);
 }]);
 
-app.factory('User', ['Auth', 'FBURL', '$location', '$firebaseObject',
-  function(Auth, FBURL, $location, $firebaseObject) {
+app.factory('User', ['Auth', 'FBURL', '$location',
+  function(Auth, FBURL, $location) {
     var userData = {};
-    var authData = {};
 
     var ref = new Firebase(FBURL + '/users/');
 
     function authDataCallback(data) {
       if(data) {
-        authData = data;
-
-        ref.child(encodeEmail(data.google.email)).once('value', function(snap) {
+        ref.child(data.google.email.replace(/(\.)/g, ',')).once('value', function(snap) {
+          console.log(snap.val());
           if(snap.exists()) {
             userData = snap.val();
-            $location.path('/main');
           } else {
-            userData.encodedEmail = encodeEmail(data.google.email);
-            $location.path('/register');
+            userData.encodedEmail = data.google.email.replace(/(\.)/g, ',');
+            userData.email = data.google.email;
+            userData.account = 'student';
+            userData.displayName = data.google.displayName;
+
+            ref.child(userData.encodedEmail).set(userData);
           }
         });
+        $location.path('/main');
       } else {
         userData = {};
-        authData = {};
         $location.path('/');
       }
       return userData;
-    }
-
-    function encodeEmail(email) {
-      return encodeURIComponent(email.replace(/(\.)/g, ','));
-    }
-
-    function decodeEmail(email) {
-      return decodeURIComponent(email).replace(/(,)/g, '.');
     }
 
     Auth.$onAuth(authDataCallback);
@@ -136,31 +129,17 @@ app.service('FlashcardService', ['FBURL', '$firebaseArray', '$firebaseObject',
               cardObj.questions.push({front: key, back: data[i][key]});
             }
           }
-          chartCards.studentcards.push(cardObj);
+          // chartCards.studentcards.push(cardObj);
+          ref.child('studentDecks/' + cardObj.username.replace(/(\.)/g, ',')).push(cardObj);
         }
 
       }
-      ref.child('teachercards').child(uid).push(chartCards);
-      ref.child('studentcards').push(chartCards.studentcards);
-      ref.child('allcards').push({title: chartCards.title, uid: uid, cards: chartCards.allcards});
+      // ref.child('teachercards').child(uid).push(chartCards);
+      // ref.child('studentcards').push(chartCards.studentcards);
+      // ref.child('allcards').push({title: chartCards.title, uid: uid, cards: chartCards.allcards});
 
     }
 
-    this.getStudentCards = function() {
-      return $firebaseObject(ref.child('/studentcards'));
-    }
-
-    this.getTeacherCards = function(user) {
-      return $firebaseArray(ref.child('/teachercards/' + user));
-    }
-
-    this.getCardsByKey = function(user, key) {
-      return $firebaseArray(ref.child('/teachercards').child(user).child(key).child('cards'));
-    }
-
-    this.getAllCards = function() {
-      return $firebaseArray(ref.child('allcards'));
-    }
 }]);
 
 /**
@@ -178,6 +157,13 @@ app.directive('cardFlip', [function() {
       })
     }
   }
+}]);
+
+app.directive('navBar', [function() {
+  return {
+    restrict: 'E',
+    templateUrl: 'app/shared/navbarView.html'
+  }
 }])
 
 app.controller('IndexCtrl', ['$scope', '$location', 'Auth', 'User',
@@ -187,16 +173,14 @@ app.controller('IndexCtrl', ['$scope', '$location', 'Auth', 'User',
 
 }]);
 
-app.controller('MainCtrl', ['$scope', '$location', 'Auth', 'UserData', 'FlashcardService',
-  function($scope, $location, Auth, UserData, FlashcardService) {
+app.controller('MainCtrl', ['$scope', '$location', 'Auth', 'User', 'FlashcardService',
+  function($scope, $location, Auth, User, FlashcardService) {
 
     $scope.auth = Auth;
 
     $scope.authData = Auth.$getAuth();
 
-    $scope.userData = UserData($scope.authData.uid);
-
-    $scope.teachercards = FlashcardService.getStudentCards();
+    $scope.userData = User;
 
 }]);
 
@@ -240,21 +224,4 @@ app.controller('FlashcardsCtrl', ['$scope', '$routeParams', 'Auth', 'FlashcardSe
 
     $scope.flashcards = FlashcardService.getCardsByKey($scope.authData.uid, $routeParams.flashcardKey);
 
-}]);
-
-app.controller('RegisterCtrl', ['$scope', '$location', 'Auth', 'User', 'FBURL', function($scope, $location, Auth, User, FBURL) {
-
-  $scope.authData = Auth.$getAuth();
-  console.log($scope.authData);
-  $scope.registerUser = function() {
-
-    var userData = User;
-
-    userData.email = $scope.authData.google.email;
-    userData.account = $scope.user.account;
-    userData.displayName = $scope.authData.google.displayName;
-
-    var ref = new Firebase(FBURL + '/users/' + userData.encodedEmail);
-    ref.set(userData);
-  }
 }]);
