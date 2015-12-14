@@ -48,46 +48,32 @@ app.factory('Auth', ['$firebaseAuth', 'FBURL',
 
 app.factory('User', ['Auth', 'FBURL', '$location', '$firebaseObject',
   function(Auth, FBURL, $location, $firebaseObject) {
-    var userData = {};
+    var userRef = new Firebase(FBURL + '/users/');
 
-    var ref = new Firebase(FBURL + '/users/');
+    return {
+      setUserData: function(data) {
+        var userData = {
+          encodedEmail: data.google.email.replace(/(\.)/g, ','),
+          email: data.google.email,
+          account: 'student',
+          displayName: data.google.displayName
+        };
 
-    function authDataCallback(data) {
-      if(data) {
-        userData = $firebaseObject(ref.child(data.google.email.replace(/(\.)/g, ',')));
-        // ref.child(data.google.email.replace(/(\.)/g, ',')).once('value', function(snap) {
-        //   if(snap.exists()) {
-        //     console.log('authdatacallback true');
-        //     userData = snap.val();
-        //   } else {
-        //     userData.encodedEmail = data.google.email.replace(/(\.)/g, ',');
-        //     userData.email = data.google.email;
-        //     userData.account = 'student';
-        //     userData.displayName = data.google.displayName;
-
-        //     ref.child(userData.encodedEmail).set(userData);
-        //   }
-        // });
-        $location.path('/main');
-      } else {
-        userData = {};
-        $location.path('/');
+        userRef.child(userData.email.replace(/(\.)/g, ',')).set(userData);
+      },
+      getUserData: function(data) {
+        return $firebaseObject(userRef.child(data.google.email.replace(/(\.)/g, ',')));
       }
-      return userData;
-    }
-
-    Auth.$onAuth(authDataCallback);
-    console.log(userData);
-    return userData;
+    };
 }]);
 
 app.service('FlashcardService', ['FBURL', '$firebaseArray', '$firebaseObject',
   function(FBURL, $firebaseArray, $firebaseObject) {
     var ref = new Firebase(FBURL);
 
-    this.filterCSV = function (title, data, uid) {
+    this.filterCSV = function (title, data, email) {
       var answerObj = data.shift();
-      var chartCards = {"title": title, "allcards": [], "studentcards": []};
+      var chartCards = {"title": title, "allcards": [], "students": []};
 
       //change data in the answer object
       delete answerObj["Username"];
@@ -102,7 +88,9 @@ app.service('FlashcardService', ['FBURL', '$firebaseArray', '$firebaseObject',
       for(var i = 0; i < data.length; i++) {
         var cardObj = {};
         if(data[i]["Username"]) {
+          cardObj.title = title;
           cardObj.username = data[i]["Username"];
+          chartCards.students.push(cardObj.username);
           delete data[i]["Username"];
           cardObj.questions = [];
 
@@ -118,16 +106,24 @@ app.service('FlashcardService', ['FBURL', '$firebaseArray', '$firebaseObject',
             }
           }
           // chartCards.studentcards.push(cardObj);
-          ref.child('studentDecks/' + cardObj.username.replace(/(\.)/g, ',')).push(cardObj);
-        }
+          var studentKey = ref.child('studentDecks/' + cardObj.username.replace(/(\.)/g, ',')).push(cardObj);
 
-      }
+          };
+        }
+      ref.child('teacherDecks/' + email.replace(/(\.)/g, ',')).push(chartCards);
       // ref.child('teachercards').child(uid).push(chartCards);
       // ref.child('studentcards').push(chartCards.studentcards);
       // ref.child('allcards').push({title: chartCards.title, uid: uid, cards: chartCards.allcards});
 
     }
 
+    this.getStudentCards = function(email) {
+      return $firebaseArray(ref.child('studentDecks/' + email));
+    }
+
+    this.getTeacherCards = function(email) {
+      return $firebaseArray(ref.child('teacherDecks/' + email));
+    }
 }]);
 
 /**
@@ -159,6 +155,20 @@ app.controller('IndexCtrl', ['$scope', '$location', 'Auth', 'User',
 
     $scope.auth = Auth;
 
+    $scope.auth.$onAuth(function(data) {
+      if(data) {
+        User.getUserData(data).$loaded().then(function(load) {
+          if(!load.account) {
+            User.setUserData(data);
+          }
+          $location.path('/main');
+        });
+      } else {
+        $location.path('/');
+        $scope.$apply();
+      }
+    });
+
 }]);
 
 app.controller('MainCtrl', ['$scope', '$location', 'Auth', 'User', 'FlashcardService',
@@ -168,7 +178,15 @@ app.controller('MainCtrl', ['$scope', '$location', 'Auth', 'User', 'FlashcardSer
 
     $scope.authData = Auth.$getAuth();
 
-    $scope.userData = User;
+    $scope.userData = User.getUserData($scope.authData);
+
+    $scope.userData.$loaded().then(function(load) {
+      if(load.account === 'student') {
+        $scope.cards = FlashcardService.getStudentCards(load.encodedEmail);
+      } else {
+        $scope.cards = FlashcardService.getTeacherCards(load.encodedEmail);
+      }
+    })
 
 }]);
 
@@ -188,7 +206,7 @@ app.controller('CreateCtrl', ['$scope', '$location', 'Auth', 'FlashcardService',
       Papa.parse($scope.csvFile, {
         header: true,
         complete: function(result) {
-          FlashcardService.filterCSV(title, result.data, $scope.authData.uid);
+          FlashcardService.filterCSV(title, result.data, $scope.authData.google.email);
           $location.path('/main');
           $scope.$apply();
         }
