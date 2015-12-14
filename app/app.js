@@ -16,22 +16,9 @@ app.config(['$routeProvider', function($routeProvider) {
       templateUrl: 'app/components/index/indexView.html',
       controller: 'IndexCtrl'
     })
-    .when('/register', {
-      templateUrl: 'app/components/register/registerView.html',
-      controller: 'RegisterCtrl'
-    })
     .when('/main', {
       templateUrl: 'app/components/main/mainView.html',
       controller: 'MainCtrl',
-      resolve: {
-        'currentAuth': ['Auth', function(Auth) {
-          return Auth.$requireAuth();
-        }]
-      }
-    })
-    .when('/main/:flashcardKey', {
-      templateUrl: 'app/components/main/fullCardsView.html',
-      controller: 'FlashcardsCtrl',
       resolve: {
         'currentAuth': ['Auth', function(Auth) {
           return Auth.$requireAuth();
@@ -59,27 +46,28 @@ app.factory('Auth', ['$firebaseAuth', 'FBURL',
     return $firebaseAuth(ref);
 }]);
 
-app.factory('User', ['Auth', 'FBURL', '$location',
-  function(Auth, FBURL, $location) {
+app.factory('User', ['Auth', 'FBURL', '$location', '$firebaseObject',
+  function(Auth, FBURL, $location, $firebaseObject) {
     var userData = {};
 
     var ref = new Firebase(FBURL + '/users/');
 
     function authDataCallback(data) {
       if(data) {
-        ref.child(data.google.email.replace(/(\.)/g, ',')).once('value', function(snap) {
-          console.log(snap.val());
-          if(snap.exists()) {
-            userData = snap.val();
-          } else {
-            userData.encodedEmail = data.google.email.replace(/(\.)/g, ',');
-            userData.email = data.google.email;
-            userData.account = 'student';
-            userData.displayName = data.google.displayName;
+        userData = $firebaseObject(ref.child(data.google.email.replace(/(\.)/g, ',')));
+        // ref.child(data.google.email.replace(/(\.)/g, ',')).once('value', function(snap) {
+        //   if(snap.exists()) {
+        //     console.log('authdatacallback true');
+        //     userData = snap.val();
+        //   } else {
+        //     userData.encodedEmail = data.google.email.replace(/(\.)/g, ',');
+        //     userData.email = data.google.email;
+        //     userData.account = 'student';
+        //     userData.displayName = data.google.displayName;
 
-            ref.child(userData.encodedEmail).set(userData);
-          }
-        });
+        //     ref.child(userData.encodedEmail).set(userData);
+        //   }
+        // });
         $location.path('/main');
       } else {
         userData = {};
@@ -89,7 +77,7 @@ app.factory('User', ['Auth', 'FBURL', '$location',
     }
 
     Auth.$onAuth(authDataCallback);
-
+    console.log(userData);
     return userData;
 }]);
 
@@ -212,16 +200,5 @@ app.controller('CreateCtrl', ['$scope', '$location', 'Auth', 'FlashcardService',
       FlashcardService.setTeacherCards($scope.authData.uid, flashcards);
       $location.path('/main');
     }
-
-}]);
-
-app.controller('FlashcardsCtrl', ['$scope', '$routeParams', 'Auth', 'FlashcardService',
-  function($scope, $routeParams, Auth, FlashcardService) {
-
-    $scope.auth = Auth;
-
-    $scope.authData = Auth.$getAuth();
-
-    $scope.flashcards = FlashcardService.getCardsByKey($scope.authData.uid, $routeParams.flashcardKey);
 
 }]);

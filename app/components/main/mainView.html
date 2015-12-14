@@ -6,6 +6,7 @@
     <div class="col-sm-3 text-center">
       <img ng-src="{{ authData.google.profileImageURL }}" class="img-responsive img-rounded">
       <h2>{{ authData.google.displayName }}</h2>
+      <h2>{{ userData.account }}</h2>
 
       <!-- Teacher View -->
       <div ng-show="userData.account === 'teacher'">
