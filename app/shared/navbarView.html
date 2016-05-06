@@ -12,14 +12,11 @@
 
     <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
       <ul class="nav navbar-nav">
-      <p class="navbar-text">Signed in as {{ authData.google.displayName }}</p>
-        <li class="active"><a href="#/main">Main</a></li>
         <li ng-show="userData.account === 'teacher'"><a href="#/create">Create new...</a></li>
       </ul>
       <ul class="nav navbar-nav navbar-right">
-      <button type="button" class="btn btn-default navbar-btn">Logout</button>
-        <li><a ng-click="auth.$unauth()">Logout</a></li>
-        <li><a href="#/about">About</a></li>
+        <li><a href="#/main">Signed in as {{ authData.google.displayName }}</a></li>
+        <button type="button" class="btn btn-default navbar-btn" ng-click="auth.$unauth()">Logout</button>
       </ul>
     </div>
   </div>

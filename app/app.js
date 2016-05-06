@@ -106,8 +106,8 @@ app.service('FlashcardService', ['FBURL', '$firebaseArray', '$firebaseObject',
             }
           }
           // chartCards.studentcards.push(cardObj);
-          var studentKey = ref.child('studentDecks/' + cardObj.username.replace(/(\.)/g, ',')).push(cardObj);
-
+          var studentKey = ref.child('users/' + cardObj.username.replace(/(\.)/g, ',') + '/cards').push(cardObj);
+          ref.child('users/' + email.replace(/(\.)/g, ',') + '/' + studentKey.key()).push(cardObj.username);
           };
         }
       ref.child('teacherDecks/' + email.replace(/(\.)/g, ',')).push(chartCards);
