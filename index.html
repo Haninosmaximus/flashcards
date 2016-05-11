@@ -6,23 +6,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>FlashCards!</title>
   <!-- Latest compiled and minified CSS -->
-  <!-- <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css"> -->
-  <link rel="stylesheet" type="text/css" href="assets/css/bootstrap.min.css">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
-  <link rel="stylesheet" type="text/css" href="assets/css/style.css">
+  <link rel="stylesheet" type="text/css" href="app\bower_components\bootstrap\dist\css\bootstrap.min.css">
+  <link rel="stylesheet" type="text/css" href="app\bower_components\font-awesome\css\font-awesome.min.css">
+  <link rel="stylesheet" type="text/css" href="app\assets\css\style.css">
 </head>
 <body>
 
   <div ng-view></div>
 
   <!-- Angular -->
+  <script src="app/assets/js/papaparse.min.js"></script>
   <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.7/angular.js"></script>
   <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.7/angular-route.js"></script>
-  <script src="assets/js/papaparse.min.js"></script>
   <!-- Firebase -->
   <script src="https://cdn.firebase.com/js/client/2.2.4/firebase.js"></script>
   <!-- AngularFire -->
   <script src="https://cdn.firebase.com/libs/angularfire/1.1.3/angularfire.js"></script>
-  <script type="text/javascript" src="app/app.js"></script>
+  <script type="text/javascript" src="app\app.js"></script>
 </body>
 </html>

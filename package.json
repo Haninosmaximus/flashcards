@@ -1,0 +1,28 @@
+{
+  "name": "flashcards",
+  "version": "1.0.0",
+  "description": "flashcard application based on teacher suggestions",
+  "main": "gulpfile.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rheajt/flashcards.git"
+  },
+  "author": "jordan rhea",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rheajt/flashcards/issues"
+  },
+  "homepage": "https://github.com/rheajt/flashcards#readme",
+  "dependencies": {
+    "bower": "^1.7.9",
+    "gulp": "^3.9.1",
+    "gulp-clean": "^0.3.2",
+    "gulp-connect": "^4.0.0",
+    "gulp-jshint": "^2.0.1",
+    "gulp-minify-css": "^1.2.4",
+    "gulp-uglify": "^1.5.3"
+  }
+}

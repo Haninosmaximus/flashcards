@@ -1,16 +1,16 @@
-var app = angular.module('FlashcardApp', ['ngRoute', 'firebase']);
+angular.module('FlashcardApp', ['ngRoute', 'firebase'])
 
-app.constant('FBURL', 'https://flashcardmaker.firebaseio.com/');
+.constant('FBURL', 'https://flashcardmaker.firebaseio.com/')
 
-app.run(["$rootScope", "$location", function($rootScope, $location) {
+.run(["$rootScope", "$location", function($rootScope, $location) {
   $rootScope.$on("$routeChangeError", function(event, next, previous, error) {
     if (error === "AUTH_REQUIRED") {
       $location.path("/");
     }
   });
-}]);
+}])
 
-app.config(['$routeProvider', function($routeProvider) {
+.config(['$routeProvider', function($routeProvider) {
   $routeProvider
     .when('/', {
       templateUrl: 'app/components/index/indexView.html',
@@ -37,16 +37,15 @@ app.config(['$routeProvider', function($routeProvider) {
     .otherwise({
       redirectTo: '/'
     });
-}]);
+}])
 
-
-app.factory('Auth', ['$firebaseAuth', 'FBURL',
+.factory('Auth', ['$firebaseAuth', 'FBURL',
   function($firebaseAuth, FBURL) {
     var ref = new Firebase(FBURL);
     return $firebaseAuth(ref);
-}]);
+}])
 
-app.factory('User', ['Auth', 'FBURL', '$location', '$firebaseObject',
+.factory('User', ['Auth', 'FBURL', '$location', '$firebaseObject',
   function(Auth, FBURL, $location, $firebaseObject) {
     var userRef = new Firebase(FBURL + '/users/');
 
@@ -65,9 +64,9 @@ app.factory('User', ['Auth', 'FBURL', '$location', '$firebaseObject',
         return $firebaseObject(userRef.child(data.google.email.replace(/(\.)/g, ',')));
       }
     };
-}]);
+}])
 
-app.service('FlashcardService', ['FBURL', '$firebaseArray', '$firebaseObject',
+.service('FlashcardService', ['FBURL', '$firebaseArray', '$firebaseObject',
   function(FBURL, $firebaseArray, $firebaseObject) {
     var ref = new Firebase(FBURL);
 
@@ -124,14 +123,14 @@ app.service('FlashcardService', ['FBURL', '$firebaseArray', '$firebaseObject',
     this.getTeacherCards = function(email) {
       return $firebaseArray(ref.child('teacherDecks/' + email));
     }
-}]);
+}])
 
 /**
 * Custom directive dealing with flashcards and how to flip them
 * TODO: Separate the HTML into a template
 * TODO: Change to an element that can be reused in various parts of the app
 */
-app.directive('cardFlip', [function() {
+.directive('cardFlip', [function() {
   return {
     restrict: 'A',
     scope: {},
@@ -141,16 +140,16 @@ app.directive('cardFlip', [function() {
       })
     }
   }
-}]);
+}])
 
-app.directive('navBar', [function() {
+.directive('navBar', [function() {
   return {
     restrict: 'E',
     templateUrl: 'app/shared/navbarView.html'
   }
 }])
 
-app.controller('IndexCtrl', ['$scope', '$location', 'Auth', 'User',
+.controller('IndexCtrl', ['$scope', '$location', 'Auth', 'User',
   function($scope, $location, Auth, User) {
 
     $scope.auth = Auth;
@@ -169,9 +168,9 @@ app.controller('IndexCtrl', ['$scope', '$location', 'Auth', 'User',
       }
     });
 
-}]);
+}])
 
-app.controller('MainCtrl', ['$scope', '$location', 'Auth', 'User', 'FlashcardService',
+.controller('MainCtrl', ['$scope', '$location', 'Auth', 'User', 'FlashcardService',
   function($scope, $location, Auth, User, FlashcardService) {
 
     $scope.auth = Auth;
@@ -188,9 +187,9 @@ app.controller('MainCtrl', ['$scope', '$location', 'Auth', 'User', 'FlashcardSer
       }
     })
 
-}]);
+}])
 
-app.controller('CreateCtrl', ['$scope', '$location', 'Auth', 'FlashcardService',
+.controller('CreateCtrl', ['$scope', '$location', 'Auth', 'FlashcardService',
   function($scope, $location, Auth, FlashcardService) {
 
     $scope.auth = Auth;
@@ -219,4 +218,4 @@ app.controller('CreateCtrl', ['$scope', '$location', 'Auth', 'FlashcardService',
       $location.path('/main');
     }
 
-}]);
+}])
